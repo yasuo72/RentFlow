@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "19233495180",
+    "project_id": "roomrent-b536d",
+    "storage_bucket": "roomrent-b536d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:19233495180:android:10ee82adbe5742922a83a9",
+        "android_client_info": {
+          "package_name": "com.rentflow.rentflow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDwttFlxYsY726CIJWiTISJ1htwzet7eg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
