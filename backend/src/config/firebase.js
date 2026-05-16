@@ -3,6 +3,17 @@ const fs = require('fs');
 
 let initialized = false;
 
+function parseServiceAccountJson(rawValue, sourceLabel) {
+  try {
+    return JSON.parse(rawValue);
+  } catch (error) {
+    console.warn(
+      `Firebase credentials from ${sourceLabel} could not be parsed. Push notifications are disabled.`,
+    );
+    return null;
+  }
+}
+
 function loadServiceAccountFromEnv() {
   const {
     FIREBASE_SERVICE_ACCOUNT_JSON,
@@ -12,13 +23,33 @@ function loadServiceAccountFromEnv() {
     FIREBASE_PRIVATE_KEY,
   } = process.env;
 
-  if (FIREBASE_SERVICE_ACCOUNT_JSON_PATH) {
-    const rawJson = fs.readFileSync(FIREBASE_SERVICE_ACCOUNT_JSON_PATH, 'utf8');
-    return JSON.parse(rawJson);
+  if (FIREBASE_SERVICE_ACCOUNT_JSON) {
+    const fromJsonEnv = parseServiceAccountJson(
+      FIREBASE_SERVICE_ACCOUNT_JSON,
+      'FIREBASE_SERVICE_ACCOUNT_JSON',
+    );
+
+    if (fromJsonEnv) {
+      return fromJsonEnv;
+    }
   }
 
-  if (FIREBASE_SERVICE_ACCOUNT_JSON) {
-    return JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON);
+  if (FIREBASE_SERVICE_ACCOUNT_JSON_PATH) {
+    if (!fs.existsSync(FIREBASE_SERVICE_ACCOUNT_JSON_PATH)) {
+      console.warn(
+        `Firebase credentials file was not found at "${FIREBASE_SERVICE_ACCOUNT_JSON_PATH}". Push notifications are disabled unless FIREBASE_SERVICE_ACCOUNT_JSON is provided.`,
+      );
+    } else {
+      const rawJson = fs.readFileSync(FIREBASE_SERVICE_ACCOUNT_JSON_PATH, 'utf8');
+      const fromPath = parseServiceAccountJson(
+        rawJson,
+        'FIREBASE_SERVICE_ACCOUNT_JSON_PATH',
+      );
+
+      if (fromPath) {
+        return fromPath;
+      }
+    }
   }
 
   if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
