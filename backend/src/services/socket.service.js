@@ -5,10 +5,10 @@ const User = require('../models/User');
 
 let io;
 
-function initSocket(server) {
+function initSocket(server, options = {}) {
   io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || '*',
+      origin: options.origin || process.env.CLIENT_URL || '*',
       credentials: true,
     },
   });

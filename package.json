@@ -1,0 +1,13 @@
+{
+  "name": "rentflow-railway-launcher",
+  "private": true,
+  "description": "Railway launcher for the RentFlow backend service",
+  "engines": {
+    "node": ">=20 <23",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "start": "npm --prefix backend start",
+    "postinstall": "npm --prefix backend ci --omit=dev"
+  }
+}
