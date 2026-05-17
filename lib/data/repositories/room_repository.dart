@@ -21,6 +21,23 @@ class RoomRepository {
   final ApiService _apiService;
   final dynamic _preferences;
 
+  List<RoomModel>? readCachedRooms() {
+    final cached = _preferences.getString(AppStrings.roomsCacheKey);
+    if (cached == null || cached.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(cached) as List<dynamic>;
+      return decoded
+          .whereType<Map<String, dynamic>>()
+          .map(RoomModel.fromJson)
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<RoomModel>> fetchRooms() async {
     try {
       final response = await _apiService.get('/rooms');
@@ -34,13 +51,9 @@ class RoomRepository {
       );
       return rooms;
     } on DioException {
-      final cached = _preferences.getString(AppStrings.roomsCacheKey);
+      final cached = readCachedRooms();
       if (cached != null) {
-        final decoded = jsonDecode(cached) as List<dynamic>;
-        return decoded
-            .whereType<Map<String, dynamic>>()
-            .map(RoomModel.fromJson)
-            .toList();
+        return cached;
       }
       rethrow;
     }

@@ -19,15 +19,34 @@ class DashboardRepository {
   final ApiService _apiService;
   final dynamic _preferences;
 
+  DashboardBundle? readCachedDashboard() {
+    final cached = _preferences.getString(AppStrings.dashboardCacheKey);
+    if (cached == null || cached.isEmpty) {
+      return null;
+    }
+
+    try {
+      return DashboardBundle.decode(cached);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<DashboardBundle> fetchDashboard() async {
     try {
-      final statsResponse = await _apiService.get('/dashboard/stats');
-      final chartResponse = await _apiService.get('/dashboard/monthly-chart');
-      final calendarResponse = await _apiService.get('/dashboard/payment-calendar');
-      final activityResponse = await _apiService.get(
-        '/dashboard/recent-activity',
-      );
-      final dueResponse = await _apiService.get('/dashboard/upcoming-dues');
+      final responses = await Future.wait<Map<String, dynamic>>([
+        _apiService.get('/dashboard/stats'),
+        _apiService.get('/dashboard/monthly-chart'),
+        _apiService.get('/dashboard/payment-calendar'),
+        _apiService.get('/dashboard/recent-activity'),
+        _apiService.get('/dashboard/upcoming-dues'),
+      ]);
+
+      final statsResponse = responses[0];
+      final chartResponse = responses[1];
+      final calendarResponse = responses[2];
+      final activityResponse = responses[3];
+      final dueResponse = responses[4];
 
       final bundle = DashboardBundle(
         stats: DashboardStatsModel.fromJson(
@@ -59,9 +78,9 @@ class DashboardRepository {
 
       return bundle;
     } on DioException {
-      final cached = _preferences.getString(AppStrings.dashboardCacheKey);
+      final cached = readCachedDashboard();
       if (cached != null) {
-        return DashboardBundle.decode(cached);
+        return cached;
       }
       rethrow;
     }

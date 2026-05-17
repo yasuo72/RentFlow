@@ -9,28 +9,43 @@ import 'package:shimmer/shimmer.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/utils/currency_formatter.dart';
+import '../../core/utils/date_utils.dart';
 import '../../core/widgets/app_surfaces.dart';
 import '../../data/models/dashboard_stats_model.dart';
 import '../../data/models/room_model.dart';
 import '../auth/auth_provider.dart';
+import '../notifications/notifications_provider.dart';
+import '../payments/widgets/payment_qr_card.dart';
 import '../rooms/rooms_provider.dart';
 import 'dashboard_provider.dart';
 import 'widgets/activity_feed_widget.dart';
 import 'widgets/collection_chart_widget.dart';
 import 'widgets/due_alerts_widget.dart';
 import 'widgets/payment_calendar_widget.dart';
-import '../payments/widgets/payment_qr_card.dart';
 import 'widgets/stat_card_widget.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
     final l10n = context.l10n;
     final dashboard = ref.watch(dashboardProvider);
     final auth = ref.watch(authControllerProvider);
     final rooms = ref.watch(roomsProvider);
+    final notifications = ref.watch(notificationsProvider);
+    final unreadNotifications = ref.watch(unreadNotificationCountProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -44,7 +59,9 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             _DashboardHeader(
               userName: auth.user?.name ?? 'Family',
+              unreadCount: unreadNotifications,
               onReportsTap: () => context.push('/reports'),
+              onNotificationsTap: () => context.push('/notifications'),
               onPeopleTap: () => context.push('/tenants'),
             ),
             const SizedBox(height: 18),
@@ -55,11 +72,21 @@ class DashboardScreen extends ConsumerWidget {
               onOpen: () => context.push('/payment-qr'),
             ),
             const SizedBox(height: 12),
+            _NotificationsPreviewCard(
+              items: notifications,
+              unreadCount: unreadNotifications,
+              onOpen: () => context.push('/notifications'),
+            ),
+            const SizedBox(height: 12),
             _StatsGrid(stats: bundle.stats),
             const SizedBox(height: 20),
-            CollectionChartWidget(points: bundle.chart),
+            RepaintBoundary(
+              child: CollectionChartWidget(points: bundle.chart),
+            ),
             const SizedBox(height: 20),
-            PaymentCalendarWidget(events: bundle.calendarEvents),
+            RepaintBoundary(
+              child: PaymentCalendarWidget(events: bundle.calendarEvents),
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -70,7 +97,8 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => StatefulNavigationShell.of(context).goBranch(1),
+                  onPressed: () =>
+                      StatefulNavigationShell.of(context).goBranch(1),
                   child: Text(l10n.tr('viewAll')),
                 ),
               ],
@@ -78,9 +106,13 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             _RoomsQuickRow(rooms: rooms),
             const SizedBox(height: 20),
-            DueAlertsWidget(dues: bundle.dues),
+            RepaintBoundary(
+              child: DueAlertsWidget(dues: bundle.dues),
+            ),
             const SizedBox(height: 20),
-            ActivityFeedWidget(items: bundle.activity),
+            RepaintBoundary(
+              child: ActivityFeedWidget(items: bundle.activity),
+            ),
           ],
         ),
         loading: () => ListView(
@@ -131,12 +163,16 @@ class DashboardScreen extends ConsumerWidget {
 class _DashboardHeader extends StatefulWidget {
   const _DashboardHeader({
     required this.userName,
+    required this.unreadCount,
     required this.onReportsTap,
+    required this.onNotificationsTap,
     required this.onPeopleTap,
   });
 
   final String userName;
+  final int unreadCount;
   final VoidCallback onReportsTap;
+  final VoidCallback onNotificationsTap;
   final VoidCallback onPeopleTap;
 
   @override
@@ -154,6 +190,7 @@ class _DashboardHeaderState extends State<_DashboardHeader> {
       if (!mounted) {
         return;
       }
+
       setState(() {
         _now = DateTime.now();
       });
@@ -170,18 +207,9 @@ class _DashboardHeaderState extends State<_DashboardHeader> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final localeTag = Localizations.localeOf(context).toLanguageTag();
-    final dateLabel = DateFormat(
-      'EEEE, d MMMM',
-      localeTag,
-    ).format(_now);
-    final timeLabel = DateFormat(
-      'hh:mm a',
-      localeTag,
-    ).format(_now);
-    final greeting = _greetingFor(
-      hour: _now.hour,
-      isHindi: l10n.isHindi,
-    );
+    final dateLabel = DateFormat('EEEE, d MMMM', localeTag).format(_now);
+    final timeLabel = DateFormat('hh:mm a', localeTag).format(_now);
+    final greeting = _greetingFor(hour: _now.hour, isHindi: l10n.isHindi);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,7 +219,7 @@ class _DashboardHeaderState extends State<_DashboardHeader> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${dateLabel.toUpperCase()} · $timeLabel',
+                '${dateLabel.toUpperCase()} - $timeLabel',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   letterSpacing: 0.9,
                 ),
@@ -217,6 +245,11 @@ class _DashboardHeaderState extends State<_DashboardHeader> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _NotificationBellButton(
+              unreadCount: widget.unreadCount,
+              onTap: widget.onNotificationsTap,
+            ),
+            const SizedBox(width: 8),
             AppIconButtonCard(
               icon: Icons.bar_chart_rounded,
               onTap: widget.onReportsTap,
@@ -368,42 +401,203 @@ class _StatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 10,
-      mainAxisSpacing: 10,
-      shrinkWrap: true,
-      childAspectRatio: 1.18,
-      physics: const NeverScrollableScrollPhysics(),
+
+    return Column(
       children: [
-        StatCardWidget(
-          label: l10n.isHindi ? 'कुल कमरे' : 'Total rooms',
-          value: stats.totalRooms,
-          icon: Icons.home_work_rounded,
-          color: AppColors.primary,
-          badge: '${stats.occupied} occ',
+        SizedBox(
+          height: 154,
+          child: Row(
+            children: [
+            Expanded(
+              child: StatCardWidget(
+                label: l10n.isHindi ? 'कुल कमरे' : 'Total rooms',
+                value: stats.totalRooms,
+                icon: Icons.home_work_rounded,
+                color: AppColors.primary,
+                badge: '${stats.occupied} occ',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: StatCardWidget(
+                label: l10n.isHindi ? 'किरायेदार' : 'Tenants',
+                value: stats.tenantCount,
+                icon: Icons.people_alt_rounded,
+                color: AppColors.accent,
+              ),
+            ),
+            ],
+          ),
         ),
-        StatCardWidget(
-          label: l10n.isHindi ? 'किरायेदार' : 'Tenants',
-          value: stats.tenantCount,
-          icon: Icons.people_alt_rounded,
-          color: AppColors.accent,
-        ),
-        StatCardWidget(
-          label: l10n.isHindi ? 'बकाया' : 'Pending due',
-          value: stats.totalPending,
-          icon: Icons.schedule_rounded,
-          color: AppColors.warning,
-          isCurrency: true,
-        ),
-        StatCardWidget(
-          label: l10n.tr('expenses'),
-          value: stats.totalExpenses,
-          icon: Icons.receipt_long_rounded,
-          color: AppColors.danger,
-          isCurrency: true,
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 154,
+          child: Row(
+            children: [
+            Expanded(
+              child: StatCardWidget(
+                label: l10n.isHindi ? 'बकाया' : 'Pending due',
+                value: stats.totalPending,
+                icon: Icons.schedule_rounded,
+                color: AppColors.warning,
+                isCurrency: true,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: StatCardWidget(
+                label: l10n.tr('expenses'),
+                value: stats.totalExpenses,
+                icon: Icons.receipt_long_rounded,
+                color: AppColors.danger,
+                isCurrency: true,
+              ),
+            ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _NotificationBellButton extends StatelessWidget {
+  const _NotificationBellButton({
+    required this.unreadCount,
+    required this.onTap,
+  });
+
+  final int unreadCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AppIconButtonCard(
+          icon: Icons.notifications_none_rounded,
+          onTap: onTap,
+          color: unreadCount > 0 ? AppColors.primary : null,
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+              constraints: const BoxConstraints(minWidth: 20),
+              decoration: BoxDecoration(
+                color: AppColors.danger,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  width: 2,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                unreadCount > 9 ? '9+' : '$unreadCount',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _NotificationsPreviewCard extends StatelessWidget {
+  const _NotificationsPreviewCard({
+    required this.items,
+    required this.unreadCount,
+    required this.onOpen,
+  });
+
+  final List<InAppNotification> items;
+  final int unreadCount;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final previewItems = items.take(3).toList(growable: false);
+
+    return RepaintBoundary(
+      child: AppSectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppSectionTitle(
+              eyebrow: l10n.tr('notifications'),
+              title: l10n.tr('notificationsTitle'),
+              subtitle: unreadCount == 0
+                  ? l10n.tr('allCaughtUp')
+                  : l10n.tr(
+                      'notificationsUnreadCount',
+                      params: {'count': unreadCount.toString()},
+                    ),
+              action: TextButton(
+                onPressed: onOpen,
+                child: Text(l10n.tr('openInbox')),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (previewItems.isEmpty)
+              Text(
+                l10n.tr('noNotificationsSubtitle'),
+                style: Theme.of(context).textTheme.bodySmall,
+              )
+            else
+              ...previewItems.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: item.color.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(item.icon, color: item.color, size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              item.message,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        AppDateUtils.timeAgo(item.createdAt),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

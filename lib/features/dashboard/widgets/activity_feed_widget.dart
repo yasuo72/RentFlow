@@ -66,13 +66,12 @@ class ActivityFeedWidget extends StatelessWidget {
                             item.details.isNotEmpty
                                 ? item.details
                                 : item.action,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              height: 1.35,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(height: 1.35),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${item.userName} • ${AppDateUtils.timeAgo(item.createdAt)}',
+                            '${item.userName} - ${AppDateUtils.timeAgo(item.createdAt)}',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],

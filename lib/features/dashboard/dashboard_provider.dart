@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/dashboard_stats_model.dart';
@@ -10,14 +12,28 @@ final dashboardProvider =
 
 class DashboardController extends AsyncNotifier<DashboardBundle> {
   @override
-  Future<DashboardBundle> build() {
-    return ref.read(dashboardRepositoryProvider).fetchDashboard();
+  Future<DashboardBundle> build() async {
+    final repository = ref.read(dashboardRepositoryProvider);
+    final cached = repository.readCachedDashboard();
+
+    if (cached != null) {
+      Future.microtask(() => refresh(silent: true));
+      return cached;
+    }
+
+    return repository.fetchDashboard();
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(dashboardRepositoryProvider).fetchDashboard(),
-    );
+  Future<void> refresh({bool silent = false}) async {
+    final previous = state.asData?.value;
+
+    try {
+      final fresh = await ref.read(dashboardRepositoryProvider).fetchDashboard();
+      state = AsyncData(fresh);
+    } catch (error, stackTrace) {
+      if (!silent || previous == null) {
+        state = AsyncError(error, stackTrace);
+      }
+    }
   }
 }

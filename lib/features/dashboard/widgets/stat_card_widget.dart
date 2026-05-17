@@ -40,6 +40,7 @@ class StatCardWidget extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
                 children: [
@@ -73,7 +74,7 @@ class StatCardWidget extends StatelessWidget {
                     ),
                 ],
               ),
-              const Spacer(),
+              const SizedBox(height: 20),
               Text(
                 isCurrency
                     ? CurrencyFormatter.inr(value)

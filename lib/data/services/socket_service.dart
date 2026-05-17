@@ -28,32 +28,38 @@ class SocketService {
     _socket = io.io(
       AppStrings.socketBaseUrl,
       io.OptionBuilder()
-          .setTransports(['websocket'])
+          .setTransports(['polling', 'websocket'])
           .setAuth({'token': token})
+          .enableReconnection()
+          .setReconnectionAttempts(12)
+          .setReconnectionDelay(1000)
+          .setReconnectionDelayMax(5000)
+          .setTimeout(20000)
           .enableAutoConnect()
           .build(),
     );
 
     _socket?.onConnect((_) {});
     _socket?.on('payment:new', (_) {
-      _ref.invalidate(paymentsProvider);
-      _ref.invalidate(roomsProvider);
-      _ref.invalidate(dashboardProvider);
-      _ref.invalidate(tenantsProvider);
+      _ref.read(paymentsProvider.notifier).refresh(silent: true);
+      _ref.invalidate(pendingPaymentsProvider);
+      _ref.read(roomsProvider.notifier).refresh(silent: true);
+      _ref.read(dashboardProvider.notifier).refresh(silent: true);
+      _ref.read(tenantsProvider.notifier).refresh(silent: true);
     });
     _socket?.on('room:updated', (_) {
-      _ref.invalidate(roomsProvider);
-      _ref.invalidate(dashboardProvider);
-      _ref.invalidate(tenantsProvider);
+      _ref.read(roomsProvider.notifier).refresh(silent: true);
+      _ref.read(dashboardProvider.notifier).refresh(silent: true);
+      _ref.read(tenantsProvider.notifier).refresh(silent: true);
     });
     _socket?.on('tenant:added', (_) {
-      _ref.invalidate(tenantsProvider);
-      _ref.invalidate(roomsProvider);
-      _ref.invalidate(dashboardProvider);
+      _ref.read(tenantsProvider.notifier).refresh(silent: true);
+      _ref.read(roomsProvider.notifier).refresh(silent: true);
+      _ref.read(dashboardProvider.notifier).refresh(silent: true);
     });
     _socket?.on('expense:added', (_) {
-      _ref.invalidate(expensesProvider);
-      _ref.invalidate(dashboardProvider);
+      _ref.read(expensesProvider.notifier).refresh(silent: true);
+      _ref.read(dashboardProvider.notifier).refresh(silent: true);
     });
   }
 

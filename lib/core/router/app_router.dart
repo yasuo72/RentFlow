@@ -10,6 +10,7 @@ import '../../features/expenses/expenses_list_screen.dart';
 import '../../features/navigation/app_shell.dart';
 import '../../features/media/image_viewer_screen.dart';
 import '../../features/media/pdf_viewer_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/payments/add_payment_screen.dart';
 import '../../features/payments/payment_detail_screen.dart';
 import '../../features/payments/payment_qr_screen.dart';
@@ -183,6 +184,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/payment-qr',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const PaymentQrScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ],
     redirect: (context, state) {

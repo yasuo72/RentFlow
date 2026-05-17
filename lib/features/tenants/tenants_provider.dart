@@ -25,11 +25,17 @@ class TenantsController extends AsyncNotifier<List<TenantModel>> {
     return ref.read(tenantRepositoryProvider).fetchTenants();
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(tenantRepositoryProvider).fetchTenants(),
-    );
-    ref.invalidate(inactiveTenantsProvider);
+  Future<void> refresh({bool silent = false}) async {
+    final previous = state.asData?.value;
+
+    try {
+      final fresh = await ref.read(tenantRepositoryProvider).fetchTenants();
+      state = AsyncData(fresh);
+      ref.invalidate(inactiveTenantsProvider);
+    } catch (error, stackTrace) {
+      if (!silent || previous == null) {
+        state = AsyncError(error, stackTrace);
+      }
+    }
   }
 }

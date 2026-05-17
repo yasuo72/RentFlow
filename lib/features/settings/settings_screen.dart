@@ -9,11 +9,21 @@ import '../../core/theme/theme_provider.dart';
 import '../../core/widgets/app_surfaces.dart';
 import '../auth/auth_provider.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
     final l10n = context.l10n;
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
@@ -109,14 +119,10 @@ class SettingsScreen extends ConsumerWidget {
                 _SettingsTile(
                   icon: Icons.dark_mode_rounded,
                   color: AppColors.primary,
-                  title: l10n.tr('darkMode'),
-                  subtitle: l10n.tr('darkModeSubtitle'),
-                  trailing: Switch(
-                    value: themeMode == ThemeMode.dark,
-                    onChanged: (value) => ref
-                        .read(themeModeProvider.notifier)
-                        .setThemeMode(value ? ThemeMode.dark : ThemeMode.light),
-                  ),
+                  title: l10n.tr('themeMode'),
+                  subtitle:
+                      '${l10n.tr('themeModeSubtitle')} - ${_themeModeLabel(l10n, themeMode)}',
+                  onTap: () => _showThemeSheet(context, ref),
                 ),
                 _SettingsTile(
                   icon: Icons.lock_rounded,
@@ -243,6 +249,88 @@ class SettingsScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Future<void> _showThemeSheet(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final themeMode = ref.read(themeModeProvider);
+
+    return showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.tr('themeMode'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.tr('themeModeSubtitle'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    ChoiceChip(
+                      label: Text(l10n.tr('followDeviceTheme')),
+                      selected: themeMode == ThemeMode.system,
+                      onSelected: (_) async {
+                        await ref
+                            .read(themeModeProvider.notifier)
+                            .setThemeMode(ThemeMode.system);
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
+                    ChoiceChip(
+                      label: Text(l10n.tr('lightMode')),
+                      selected: themeMode == ThemeMode.light,
+                      onSelected: (_) async {
+                        await ref
+                            .read(themeModeProvider.notifier)
+                            .setThemeMode(ThemeMode.light);
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
+                    ChoiceChip(
+                      label: Text(l10n.tr('darkMode')),
+                      selected: themeMode == ThemeMode.dark,
+                      onSelected: (_) async {
+                        await ref
+                            .read(themeModeProvider.notifier)
+                            .setThemeMode(ThemeMode.dark);
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _themeModeLabel(AppLocalizations l10n, ThemeMode themeMode) {
+    return switch (themeMode) {
+      ThemeMode.system => l10n.tr('followDeviceTheme'),
+      ThemeMode.light => l10n.tr('lightMode'),
+      ThemeMode.dark => l10n.tr('darkMode'),
+    };
   }
 }
 

@@ -38,4 +38,15 @@ class ExpenseModel {
           : null,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    '_id': id,
+    'category': category,
+    'amount': amount,
+    'date': date.toIso8601String(),
+    'description': description,
+    'room': room?.toJson(),
+    'billPhoto': billPhoto,
+    'recordedBy': recordedBy?.toJson(),
+  };
 }

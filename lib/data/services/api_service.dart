@@ -1,7 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
-import 'dart:typed_data';
 
 import '../../core/constants/app_strings.dart';
 import 'secure_storage_service.dart';
@@ -16,8 +16,9 @@ class ApiService {
     : _dio = Dio(
         BaseOptions(
           baseUrl: AppStrings.apiBaseUrl,
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
+          connectTimeout: const Duration(seconds: 30),
+          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 30),
           headers: const {'Content-Type': 'application/json'},
         ),
       ) {
@@ -32,14 +33,16 @@ class ApiService {
         },
       ),
     );
-    _dio.interceptors.add(
-      PrettyDioLogger(
-        requestHeader: false,
-        requestBody: true,
-        responseBody: false,
-        responseHeader: false,
-      ),
-    );
+    if (kDebugMode) {
+      _dio.interceptors.add(
+        PrettyDioLogger(
+          requestHeader: false,
+          requestBody: true,
+          responseBody: false,
+          responseHeader: false,
+        ),
+      );
+    }
   }
 
   final SecureStorageService _storage;

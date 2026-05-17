@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/room_model.dart';
@@ -16,14 +18,28 @@ final roomDetailProvider = FutureProvider.family<RoomModel, String>((
 
 class RoomsController extends AsyncNotifier<List<RoomModel>> {
   @override
-  Future<List<RoomModel>> build() {
-    return ref.read(roomRepositoryProvider).fetchRooms();
+  Future<List<RoomModel>> build() async {
+    final repository = ref.read(roomRepositoryProvider);
+    final cached = repository.readCachedRooms();
+
+    if (cached != null) {
+      Future.microtask(() => refresh(silent: true));
+      return cached;
+    }
+
+    return repository.fetchRooms();
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(roomRepositoryProvider).fetchRooms(),
-    );
+  Future<void> refresh({bool silent = false}) async {
+    final previous = state.asData?.value;
+
+    try {
+      final fresh = await ref.read(roomRepositoryProvider).fetchRooms();
+      state = AsyncData(fresh);
+    } catch (error, stackTrace) {
+      if (!silent || previous == null) {
+        state = AsyncError(error, stackTrace);
+      }
+    }
   }
 }

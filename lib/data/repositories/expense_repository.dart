@@ -1,11 +1,18 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/constants/app_strings.dart';
+import '../../core/providers/app_providers.dart';
 import '../models/expense_model.dart';
 import '../services/api_service.dart';
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
-  return ExpenseRepository(ref.watch(apiServiceProvider));
+  return ExpenseRepository(
+    ref.watch(apiServiceProvider),
+    ref.watch(sharedPreferencesProvider),
+  );
 });
 
 class ExpenseSummaryItem {
@@ -29,16 +36,47 @@ class ExpenseSummaryItem {
 }
 
 class ExpenseRepository {
-  ExpenseRepository(this._apiService);
+  ExpenseRepository(this._apiService, this._preferences);
 
   final ApiService _apiService;
+  final dynamic _preferences;
+
+  List<ExpenseModel>? readCachedExpenses() {
+    final cached = _preferences.getString(AppStrings.expensesCacheKey);
+    if (cached == null || cached.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(cached) as List<dynamic>;
+      return decoded
+          .whereType<Map<String, dynamic>>()
+          .map(ExpenseModel.fromJson)
+          .toList();
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<List<ExpenseModel>> fetchExpenses() async {
-    final response = await _apiService.get('/expenses');
-    return (response['data'] as List<dynamic>? ?? const [])
-        .whereType<Map<String, dynamic>>()
-        .map(ExpenseModel.fromJson)
-        .toList();
+    try {
+      final response = await _apiService.get('/expenses');
+      final expenses = (response['data'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(ExpenseModel.fromJson)
+          .toList();
+      await _preferences.setString(
+        AppStrings.expensesCacheKey,
+        jsonEncode(expenses.map((expense) => expense.toJson()).toList()),
+      );
+      return expenses;
+    } on DioException {
+      final cached = readCachedExpenses();
+      if (cached != null) {
+        return cached;
+      }
+      rethrow;
+    }
   }
 
   Future<List<ExpenseSummaryItem>> fetchSummary(DateTime month) async {

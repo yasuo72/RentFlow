@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/expense_model.dart';
@@ -10,15 +12,29 @@ final expensesProvider =
 
 class ExpensesController extends AsyncNotifier<List<ExpenseModel>> {
   @override
-  Future<List<ExpenseModel>> build() {
-    return ref.read(expenseRepositoryProvider).fetchExpenses();
+  Future<List<ExpenseModel>> build() async {
+    final repository = ref.read(expenseRepositoryProvider);
+    final cached = repository.readCachedExpenses();
+
+    if (cached != null) {
+      Future.microtask(() => refresh(silent: true));
+      return cached;
+    }
+
+    return repository.fetchExpenses();
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => ref.read(expenseRepositoryProvider).fetchExpenses(),
-    );
+  Future<void> refresh({bool silent = false}) async {
+    final previous = state.asData?.value;
+
+    try {
+      final fresh = await ref.read(expenseRepositoryProvider).fetchExpenses();
+      state = AsyncData(fresh);
+    } catch (error, stackTrace) {
+      if (!silent || previous == null) {
+        state = AsyncError(error, stackTrace);
+      }
+    }
   }
 
   Future<void> addExpense(

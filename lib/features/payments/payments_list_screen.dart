@@ -9,11 +9,22 @@ import 'payments_provider.dart';
 import 'widgets/payment_card_widget.dart';
 import 'widgets/pending_payment_tile.dart';
 
-class PaymentsListScreen extends ConsumerWidget {
+class PaymentsListScreen extends ConsumerStatefulWidget {
   const PaymentsListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PaymentsListScreen> createState() => _PaymentsListScreenState();
+}
+
+class _PaymentsListScreenState extends ConsumerState<PaymentsListScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
     final payments = ref.watch(paymentsProvider);
     final pending = ref.watch(pendingPaymentsProvider);
     final filter = ref.watch(paymentsFilterProvider);
@@ -27,7 +38,7 @@ class PaymentsListScreen extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(paymentsProvider);
+          await ref.read(paymentsProvider.notifier).refresh();
           ref.invalidate(pendingPaymentsProvider);
         },
         child: ListView(

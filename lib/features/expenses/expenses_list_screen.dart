@@ -9,11 +9,22 @@ import '../../core/widgets/app_surfaces.dart';
 import '../auth/auth_provider.dart';
 import 'expenses_provider.dart';
 
-class ExpensesListScreen extends ConsumerWidget {
+class ExpensesListScreen extends ConsumerStatefulWidget {
   const ExpensesListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ExpensesListScreen> createState() => _ExpensesListScreenState();
+}
+
+class _ExpensesListScreenState extends ConsumerState<ExpensesListScreen>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+
     final isSuperAdmin =
         ref.watch(authControllerProvider).user?.isSuperAdmin ?? false;
     final expenses = ref.watch(expensesProvider);

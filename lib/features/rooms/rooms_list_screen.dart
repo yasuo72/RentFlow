@@ -14,9 +14,13 @@ class RoomsListScreen extends ConsumerStatefulWidget {
   ConsumerState<RoomsListScreen> createState() => _RoomsListScreenState();
 }
 
-class _RoomsListScreenState extends ConsumerState<RoomsListScreen> {
+class _RoomsListScreenState extends ConsumerState<RoomsListScreen>
+    with AutomaticKeepAliveClientMixin {
   final _searchController = TextEditingController();
   String _filter = 'all';
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void dispose() {
@@ -26,6 +30,7 @@ class _RoomsListScreenState extends ConsumerState<RoomsListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final rooms = ref.watch(roomsProvider);
     final query = _searchController.text.trim().toLowerCase();
 
