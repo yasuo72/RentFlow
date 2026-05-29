@@ -1,0 +1,101 @@
+<svg width="1400" height="700" viewBox="0 0 1400 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#09090F"/>
+      <stop offset="1" stop-color="#161625"/>
+    </linearGradient>
+    <linearGradient id="p" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6C63FF"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#00D9A3"/>
+      <stop offset="1" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="700" rx="40" fill="url(#bg)"/>
+  <circle cx="1200" cy="148" r="230" fill="#6C63FF" opacity="0.14"/>
+  <circle cx="134" cy="578" r="240" fill="#00D9A3" opacity="0.10"/>
+  <text x="70" y="78" fill="#F0EFF8" font-family="Sora, Inter, Arial" font-size="42" font-weight="850">Feature matrix</text>
+  <text x="70" y="118" fill="#A09EC0" font-family="Inter, Arial" font-size="20">A quick map of the product capabilities already wired into the app and backend.</text>
+
+  <g filter="url(#shadow)" font-family="Inter, Arial">
+    <g transform="translate(78 180)">
+      <rect width="296" height="190" rx="30" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <rect x="26" y="26" width="54" height="54" rx="18" fill="url(#p)"/>
+      <text x="96" y="50" fill="#FFFFFF" font-size="21" font-weight="850">Collections</text>
+      <text x="96" y="77" fill="#A09EC0" font-size="15">Rent payment core</text>
+      <text x="26" y="118" fill="#F0EFF8" font-size="15">Partial follow-up</text>
+      <text x="26" y="146" fill="#F0EFF8" font-size="15">Manual due and opening due</text>
+      <text x="26" y="174" fill="#F0EFF8" font-size="15">Receipts and QR sharing</text>
+    </g>
+    <g transform="translate(402 180)">
+      <rect width="296" height="190" rx="30" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <rect x="26" y="26" width="54" height="54" rx="18" fill="url(#g)"/>
+      <text x="96" y="50" fill="#FFFFFF" font-size="21" font-weight="850">Tenants</text>
+      <text x="96" y="77" fill="#A09EC0" font-size="15">People and documents</text>
+      <text x="26" y="118" fill="#F0EFF8" font-size="15">Active and past tenants</text>
+      <text x="26" y="146" fill="#F0EFF8" font-size="15">WhatsApp and call shortcuts</text>
+      <text x="26" y="174" fill="#F0EFF8" font-size="15">Photo/PDF upload and download</text>
+    </g>
+    <g transform="translate(726 180)">
+      <rect width="296" height="190" rx="30" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <rect x="26" y="26" width="54" height="54" rx="18" fill="#FFB800"/>
+      <text x="96" y="50" fill="#FFFFFF" font-size="21" font-weight="850">Reports</text>
+      <text x="96" y="77" fill="#A09EC0" font-size="15">Money visibility</text>
+      <text x="26" y="118" fill="#F0EFF8" font-size="15">Monthly collection report</text>
+      <text x="26" y="146" fill="#F0EFF8" font-size="15">Yearly income trend</text>
+      <text x="26" y="174" fill="#F0EFF8" font-size="15">Due report and expense mix</text>
+    </g>
+    <g transform="translate(1050 180)">
+      <rect width="296" height="190" rx="30" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <rect x="26" y="26" width="54" height="54" rx="18" fill="#F43F5E"/>
+      <text x="96" y="50" fill="#FFFFFF" font-size="21" font-weight="850">Admin</text>
+      <text x="96" y="77" fill="#A09EC0" font-size="15">Owner control</text>
+      <text x="26" y="118" fill="#F0EFF8" font-size="15">User deactivate/delete</text>
+      <text x="26" y="146" fill="#F0EFF8" font-size="15">Activity log cleanup</text>
+      <text x="26" y="174" fill="#F0EFF8" font-size="15">Protected super admin</text>
+    </g>
+
+    <g transform="translate(78 416)">
+      <rect width="296" height="190" rx="30" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <rect x="26" y="26" width="54" height="54" rx="18" fill="#4D9EFF"/>
+      <text x="96" y="50" fill="#FFFFFF" font-size="21" font-weight="850">Live sync</text>
+      <text x="96" y="77" fill="#A09EC0" font-size="15">Shared family data</text>
+      <text x="26" y="118" fill="#F0EFF8" font-size="15">Socket.IO refresh events</text>
+      <text x="26" y="146" fill="#F0EFF8" font-size="15">FCM push notifications</text>
+      <text x="26" y="174" fill="#F0EFF8" font-size="15">In-app notification inbox</text>
+    </g>
+    <g transform="translate(402 416)">
+      <rect width="296" height="190" rx="30" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <rect x="26" y="26" width="54" height="54" rx="18" fill="#00D9A3"/>
+      <text x="96" y="50" fill="#FFFFFF" font-size="21" font-weight="850">Voice</text>
+      <text x="96" y="77" fill="#A09EC0" font-size="15">Parent-friendly control</text>
+      <text x="26" y="118" fill="#F0EFF8" font-size="15">Hindi + English parsing</text>
+      <text x="26" y="146" fill="#F0EFF8" font-size="15">Rent, reminder, call, docs</text>
+      <text x="26" y="174" fill="#F0EFF8" font-size="15">Confirm before action</text>
+    </g>
+    <g transform="translate(726 416)">
+      <rect width="296" height="190" rx="30" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <rect x="26" y="26" width="54" height="54" rx="18" fill="#6C63FF"/>
+      <text x="96" y="50" fill="#FFFFFF" font-size="21" font-weight="850">Security</text>
+      <text x="96" y="77" fill="#A09EC0" font-size="15">Family privacy</text>
+      <text x="26" y="118" fill="#F0EFF8" font-size="15">JWT and secure storage</text>
+      <text x="26" y="146" fill="#F0EFF8" font-size="15">Biometric app lock</text>
+      <text x="26" y="174" fill="#F0EFF8" font-size="15">Rate-limited login</text>
+    </g>
+    <g transform="translate(1050 416)">
+      <rect width="296" height="190" rx="30" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <rect x="26" y="26" width="54" height="54" rx="18" fill="#FFB800"/>
+      <text x="96" y="50" fill="#FFFFFF" font-size="21" font-weight="850">Offline feel</text>
+      <text x="96" y="77" fill="#A09EC0" font-size="15">Fast perceived loading</text>
+      <text x="26" y="118" fill="#F0EFF8" font-size="15">Cache-first dashboard</text>
+      <text x="26" y="146" fill="#F0EFF8" font-size="15">Silent refresh strategy</text>
+      <text x="26" y="174" fill="#F0EFF8" font-size="15">No blank white screens</text>
+    </g>
+  </g>
+</svg>

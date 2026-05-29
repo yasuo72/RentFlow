@@ -1,0 +1,102 @@
+<svg width="1400" height="720" viewBox="0 0 1400 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#070711"/>
+      <stop offset="1" stop-color="#111C2F"/>
+    </linearGradient>
+    <linearGradient id="primary" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6C63FF"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#00D9A3"/>
+      <stop offset="1" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="30" stdDeviation="26" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+  </defs>
+  <rect width="1400" height="720" rx="40" fill="url(#bg)"/>
+  <circle cx="1180" cy="100" r="260" fill="#6C63FF" opacity="0.16"/>
+  <circle cx="140" cy="610" r="240" fill="#00D9A3" opacity="0.12"/>
+  <text x="70" y="80" fill="#F0EFF8" font-family="Sora, Inter, Arial" font-size="42" font-weight="850">Mobile screen gallery</text>
+  <text x="70" y="120" fill="#A09EC0" font-family="Inter, Arial" font-size="20">Demo cards for the main app surfaces: dashboard, payments, tenants, reports, and settings.</text>
+
+  <g filter="url(#shadow)">
+    <g transform="translate(84 170)">
+      <rect width="204" height="420" rx="34" fill="#09090F" stroke="#FFFFFF" stroke-opacity="0.12"/>
+      <rect x="18" y="18" width="168" height="384" rx="26" fill="#111120"/>
+      <text x="34" y="54" fill="#5C5A7A" font-family="Inter, Arial" font-size="11" font-weight="800">DASHBOARD</text>
+      <text x="34" y="92" fill="#F0EFF8" font-family="Sora, Inter, Arial" font-size="25" font-weight="850">Good evening</text>
+      <rect x="34" y="118" width="136" height="70" rx="18" fill="url(#primary)"/>
+      <text x="48" y="146" fill="#DAD7FF" font-family="Inter, Arial" font-size="11">Collected</text>
+      <text x="48" y="174" fill="#FFFFFF" font-family="Sora, Inter, Arial" font-size="22" font-weight="850">42.5k</text>
+      <rect x="34" y="208" width="62" height="62" rx="16" fill="#00D9A3" fill-opacity="0.14"/>
+      <rect x="108" y="208" width="62" height="62" rx="16" fill="#FFB800" fill-opacity="0.15"/>
+      <rect x="34" y="292" width="136" height="62" rx="18" fill="#1C1C30"/>
+      <rect x="48" y="318" width="32" height="8" rx="4" fill="#00D9A3"/>
+      <rect x="88" y="304" width="32" height="22" rx="4" fill="#6C63FF"/>
+      <rect x="128" y="314" width="28" height="12" rx="4" fill="#FFB800"/>
+    </g>
+
+    <g transform="translate(332 170)">
+      <rect width="204" height="420" rx="34" fill="#09090F" stroke="#FFFFFF" stroke-opacity="0.12"/>
+      <rect x="18" y="18" width="168" height="384" rx="26" fill="#F8F9FC"/>
+      <text x="34" y="54" fill="#5C5A7A" font-family="Inter, Arial" font-size="11" font-weight="800">PAYMENT</text>
+      <text x="34" y="92" fill="#09090F" font-family="Sora, Inter, Arial" font-size="25" font-weight="850">Room 103</text>
+      <rect x="34" y="118" width="136" height="82" rx="20" fill="#EEF0FF" stroke="#D9DCFF"/>
+      <text x="54" y="151" fill="#5C5A7A" font-family="Inter, Arial" font-size="12">Amount</text>
+      <text x="54" y="182" fill="#09090F" font-family="Sora, Inter, Arial" font-size="27" font-weight="850">2500</text>
+      <rect x="34" y="220" width="38" height="34" rx="12" fill="#00D9A3" fill-opacity="0.18"/>
+      <rect x="82" y="220" width="38" height="34" rx="12" fill="#6C63FF" fill-opacity="0.18"/>
+      <rect x="132" y="220" width="38" height="34" rx="12" fill="#FFB800" fill-opacity="0.18"/>
+      <rect x="34" y="284" width="136" height="54" rx="18" fill="url(#primary)"/>
+      <text x="66" y="318" fill="#FFFFFF" font-family="Inter, Arial" font-size="15" font-weight="850">Save rent</text>
+    </g>
+
+    <g transform="translate(580 170)">
+      <rect width="204" height="420" rx="34" fill="#09090F" stroke="#FFFFFF" stroke-opacity="0.12"/>
+      <rect x="18" y="18" width="168" height="384" rx="26" fill="#111120"/>
+      <text x="34" y="54" fill="#5C5A7A" font-family="Inter, Arial" font-size="11" font-weight="800">TENANTS</text>
+      <text x="34" y="92" fill="#F0EFF8" font-family="Sora, Inter, Arial" font-size="25" font-weight="850">Documents</text>
+      <rect x="34" y="122" width="136" height="58" rx="18" fill="#1C1C30"/>
+      <circle cx="60" cy="151" r="16" fill="#6C63FF" fill-opacity="0.28"/>
+      <rect x="84" y="140" width="58" height="8" rx="4" fill="#F0EFF8"/>
+      <rect x="84" y="156" width="42" height="7" rx="3" fill="#5C5A7A"/>
+      <rect x="34" y="202" width="136" height="58" rx="18" fill="#1C1C30"/>
+      <rect x="52" y="220" width="30" height="24" rx="5" fill="#00D9A3" fill-opacity="0.36"/>
+      <text x="96" y="237" fill="#F0EFF8" font-family="Inter, Arial" font-size="13" font-weight="800">Aadhaar</text>
+      <rect x="34" y="282" width="136" height="58" rx="18" fill="#1C1C30"/>
+      <rect x="52" y="300" width="30" height="24" rx="5" fill="#FFB800" fill-opacity="0.36"/>
+      <text x="96" y="317" fill="#F0EFF8" font-family="Inter, Arial" font-size="13" font-weight="800">Agreement</text>
+    </g>
+
+    <g transform="translate(828 170)">
+      <rect width="204" height="420" rx="34" fill="#09090F" stroke="#FFFFFF" stroke-opacity="0.12"/>
+      <rect x="18" y="18" width="168" height="384" rx="26" fill="#F8F9FC"/>
+      <text x="34" y="54" fill="#5C5A7A" font-family="Inter, Arial" font-size="11" font-weight="800">REPORTS</text>
+      <text x="34" y="92" fill="#09090F" font-family="Sora, Inter, Arial" font-size="25" font-weight="850">May 2026</text>
+      <circle cx="102" cy="172" r="50" fill="#EEF0FF"/>
+      <path d="M102 122A50 50 0 1 1 64 205" stroke="#00D9A3" stroke-width="18" stroke-linecap="round"/>
+      <path d="M64 205A50 50 0 0 1 102 122" stroke="#FFB800" stroke-width="18" stroke-linecap="round"/>
+      <rect x="34" y="254" width="136" height="18" rx="9" fill="#00D9A3" fill-opacity="0.28"/>
+      <rect x="34" y="286" width="106" height="18" rx="9" fill="#6C63FF" fill-opacity="0.28"/>
+      <rect x="34" y="318" width="78" height="18" rx="9" fill="#FFB800" fill-opacity="0.28"/>
+    </g>
+
+    <g transform="translate(1076 170)">
+      <rect width="204" height="420" rx="34" fill="#09090F" stroke="#FFFFFF" stroke-opacity="0.12"/>
+      <rect x="18" y="18" width="168" height="384" rx="26" fill="#111120"/>
+      <text x="34" y="54" fill="#5C5A7A" font-family="Inter, Arial" font-size="11" font-weight="800">SETTINGS</text>
+      <text x="34" y="92" fill="#F0EFF8" font-family="Sora, Inter, Arial" font-size="25" font-weight="850">Admin</text>
+      <rect x="34" y="118" width="136" height="62" rx="18" fill="#1C1C30"/>
+      <circle cx="62" cy="149" r="17" fill="#6C63FF" fill-opacity="0.26"/>
+      <rect x="88" y="139" width="62" height="8" rx="4" fill="#F0EFF8"/>
+      <rect x="88" y="154" width="44" height="7" rx="3" fill="#5C5A7A"/>
+      <rect x="34" y="202" width="136" height="52" rx="18" fill="#1C1C30"/>
+      <text x="52" y="235" fill="#F0EFF8" font-family="Inter, Arial" font-size="14" font-weight="800">Manage users</text>
+      <rect x="34" y="274" width="136" height="52" rx="18" fill="#1C1C30"/>
+      <text x="52" y="307" fill="#F43F5E" font-family="Inter, Arial" font-size="14" font-weight="800">Activity log</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,67 @@
+<svg width="1400" height="560" viewBox="0 0 1400 560" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#09090F"/>
+      <stop offset="1" stop-color="#0F1A2E"/>
+    </linearGradient>
+    <linearGradient id="rail" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6C63FF"/>
+      <stop offset="1" stop-color="#00D9A3"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="150%">
+      <feDropShadow dx="0" dy="24" stdDeviation="24" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0 0L12 6L0 12Z" fill="#6C63FF"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="560" rx="40" fill="url(#bg)"/>
+  <circle cx="1180" cy="92" r="230" fill="#6C63FF" opacity="0.12"/>
+  <circle cx="180" cy="500" r="230" fill="#00D9A3" opacity="0.10"/>
+  <text x="70" y="76" fill="#F0EFF8" font-family="Sora, Inter, Arial" font-size="42" font-weight="850">Deployment pipeline</text>
+  <text x="70" y="116" fill="#A09EC0" font-family="Inter, Arial" font-size="20">From local development to Railway backend and Android APK delivery.</text>
+
+  <g filter="url(#shadow)" font-family="Inter, Arial">
+    <g transform="translate(90 200)">
+      <rect width="190" height="142" rx="28" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <text x="28" y="48" fill="#FFFFFF" font-size="22" font-weight="850">Local code</text>
+      <text x="28" y="82" fill="#A09EC0" font-size="15">Flutter + Express</text>
+      <text x="28" y="112" fill="#A09EC0" font-size="15">npm install</text>
+    </g>
+    <g transform="translate(356 200)">
+      <rect width="190" height="142" rx="28" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <text x="28" y="48" fill="#FFFFFF" font-size="22" font-weight="850">GitHub</text>
+      <text x="28" y="82" fill="#A09EC0" font-size="15">Commit source</text>
+      <text x="28" y="112" fill="#A09EC0" font-size="15">Lockfiles in sync</text>
+    </g>
+    <g transform="translate(622 200)">
+      <rect width="190" height="142" rx="28" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <text x="28" y="48" fill="#FFFFFF" font-size="22" font-weight="850">Railway</text>
+      <text x="28" y="82" fill="#A09EC0" font-size="15">Node 20 runtime</text>
+      <text x="28" y="112" fill="#A09EC0" font-size="15">npm ci + start</text>
+    </g>
+    <g transform="translate(888 200)">
+      <rect width="190" height="142" rx="28" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <text x="28" y="48" fill="#FFFFFF" font-size="22" font-weight="850">Backend</text>
+      <text x="28" y="82" fill="#A09EC0" font-size="15">REST + Socket.IO</text>
+      <text x="28" y="112" fill="#A09EC0" font-size="15">/health check</text>
+    </g>
+    <g transform="translate(1154 200)">
+      <rect width="190" height="142" rx="28" fill="#161625" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      <text x="28" y="48" fill="#FFFFFF" font-size="22" font-weight="850">Android</text>
+      <text x="28" y="82" fill="#A09EC0" font-size="15">flutter build apk</text>
+      <text x="28" y="112" fill="#A09EC0" font-size="15">Railway API URL</text>
+    </g>
+  </g>
+
+  <path d="M286 271H344" stroke="#6C63FF" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M552 271H610" stroke="#6C63FF" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M818 271H876" stroke="#6C63FF" stroke-width="5" marker-end="url(#arrow)"/>
+  <path d="M1084 271H1142" stroke="#6C63FF" stroke-width="5" marker-end="url(#arrow)"/>
+
+  <g transform="translate(236 414)">
+    <rect width="928" height="58" rx="22" fill="url(#rail)" fill-opacity="0.18" stroke="#FFFFFF" stroke-opacity="0.10"/>
+    <text x="30" y="37" fill="#F0EFF8" font-family="Inter, Arial" font-size="17" font-weight="700">Production API:</text>
+    <text x="166" y="37" fill="#A09EC0" font-family="Inter, Arial" font-size="17">https://rentflow-production-1.up.railway.app</text>
+  </g>
+</svg>

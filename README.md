@@ -55,6 +55,14 @@ RentFlow keeps the daily work simple:
 
 ---
 
+## Screen Gallery
+
+<p align="center">
+  <img src="docs/visuals/rentflow-screen-gallery.svg" alt="RentFlow mobile screen gallery">
+</p>
+
+---
+
 ## Demo Workflows
 
 <p align="center">
@@ -87,6 +95,10 @@ Ramesh ko call lagao
 ```
 
 The app previews the interpreted action before saving or launching external apps.
+
+<p align="center">
+  <img src="docs/visuals/rentflow-voice-map.svg" alt="RentFlow voice command map">
+</p>
 
 ### 3. WhatsApp reminders and QR
 
@@ -181,6 +193,14 @@ mindmap
 
 ---
 
+## Feature Matrix
+
+<p align="center">
+  <img src="docs/visuals/rentflow-feature-matrix.svg" alt="RentFlow feature matrix visualization">
+</p>
+
+---
+
 ## Feature Highlights
 
 ### Mobile app
@@ -234,6 +254,14 @@ mindmap
 | Push | Firebase Cloud Messaging |
 | PDF | PDFKit |
 | Deploy | Railway |
+
+---
+
+## Data Model
+
+<p align="center">
+  <img src="docs/visuals/rentflow-data-model.svg" alt="RentFlow MongoDB relationship map">
+</p>
 
 ---
 
@@ -395,6 +423,10 @@ flutter run
 
 The backend is Railway-ready.
 
+<p align="center">
+  <img src="docs/visuals/rentflow-deployment-pipeline.svg" alt="RentFlow Railway deployment pipeline">
+</p>
+
 Important deployment notes:
 
 - Railway should run the backend from `backend/` or through the root launcher.
@@ -468,4 +500,3 @@ RentFlow is currently optimized for Android. iOS files exist from Flutter scaffo
 ## License
 
 Private family utility project unless a license is added later.
-
