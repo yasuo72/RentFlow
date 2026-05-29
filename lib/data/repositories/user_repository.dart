@@ -33,4 +33,11 @@ class UserRepository {
   Future<void> deactivateUser(String id) async {
     await _apiService.delete('/users/$id');
   }
+
+  Future<void> deleteUserPermanently(String id) async {
+    await _apiService.delete(
+      '/users/$id',
+      queryParameters: {'permanent': 'true'},
+    );
+  }
 }

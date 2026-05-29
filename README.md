@@ -1,217 +1,219 @@
 # RentFlow
 
 <p align="center">
-  <img src="assets/image1.png" alt="RentFlow app icon" width="128" height="128">
+  <img src="assets/image1.png" alt="RentFlow app icon" width="120" height="120">
+</p>
+
+<h3 align="center">Rent, Tracked. Family, Synced.</h3>
+
+<p align="center">
+  A modern full-stack Flutter + Node.js rent management system built for one shared family database, live updates, QR payments, documents, reports, reminders, and voice-first rent entry.
 </p>
 
 <p align="center">
-  <strong>Rent, Tracked. Family, Synced.</strong>
-</p>
-
-<p align="center">
-  A premium full-stack family rent management app built with Flutter, Riverpod, Node.js, MongoDB, Socket.IO, and Firebase Cloud Messaging.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white" alt="Flutter">
-  <img src="https://img.shields.io/badge/Riverpod-State%20Management-6D4AFF" alt="Riverpod">
+  <img src="https://img.shields.io/badge/Flutter-Android-02569B?logo=flutter&logoColor=white" alt="Flutter">
+  <img src="https://img.shields.io/badge/Riverpod-State-6C63FF" alt="Riverpod">
+  <img src="https://img.shields.io/badge/GoRouter-Navigation-111827" alt="GoRouter">
   <img src="https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white" alt="Node.js">
-  <img src="https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white" alt="Express">
+  <img src="https://img.shields.io/badge/Express-API-000000?logo=express&logoColor=white" alt="Express">
   <img src="https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb&logoColor=white" alt="MongoDB">
-  <img src="https://img.shields.io/badge/Socket.IO-Real--time-010101?logo=socket.io&logoColor=white" alt="Socket.IO">
-  <img src="https://img.shields.io/badge/FCM-Push%20Notifications-FFCA28?logo=firebase&logoColor=black" alt="FCM">
+  <img src="https://img.shields.io/badge/Socket.IO-Live%20Sync-010101?logo=socket.io&logoColor=white" alt="Socket.IO">
+  <img src="https://img.shields.io/badge/Firebase-FCM-FFCA28?logo=firebase&logoColor=black" alt="Firebase Cloud Messaging">
   <img src="https://img.shields.io/badge/Railway-Deployed-0B0D0E?logo=railway&logoColor=white" alt="Railway">
 </p>
 
 ---
 
-## Overview
+## Visual Preview
 
-RentFlow is designed for one specific real-world workflow: a family managing rooms and rent collections together from multiple phones, with one shared source of truth.
+<p align="center">
+  <img src="docs/visuals/rentflow-showcase.svg" alt="RentFlow modern app showcase">
+</p>
 
-If Mom collects rent, Dad should see it instantly.
-
-If a tenant pays partially, the remaining amount should stay visible, be recoverable later in the same month, and carry forward automatically into the next month when needed.
-
-If a family member is on the move, they should still get:
-
-- quick rent entry
-- QR-based collection support
-- live sync
-- notification alerts
-- payment history
-- due reminders
-- admin-grade cleanup and reporting
-
-This repository contains both:
-
-- `Flutter mobile app`
-- `Node.js + Express backend API`
+> The visual boards in this README are repo-native SVG demo graphics that represent the product direction and major workflows. The actual UI is implemented in Flutter under `lib/features`.
 
 ---
 
-## Visual Snapshot
+## What RentFlow Solves
 
-### Product Shape
+RentFlow is made for a very specific real-life use case: a family manages rental rooms together, and every trusted family member uses the same shared database.
+
+When Mom records a rent payment, Dad should see it within seconds. When a tenant pays partially, the remaining amount should stay visible. When an old due exists, it should be easy to carry forward, settle later, remind on WhatsApp, and generate a receipt.
+
+RentFlow keeps the daily work simple:
+
+| Need | RentFlow answer |
+|---|---|
+| Fast rent collection | Room-aware payment screen with partial and extra due support |
+| Family sync | Socket.IO events refresh all phones in real time |
+| Parent-friendly use | Hindi + English voice assistant for common actions |
+| Tenant reminders | WhatsApp deep links with formatted rent messages and QR link |
+| Receipts | PDF receipts and shareable receipt text |
+| Documents | Tenant photo/PDF uploads, viewer screens, and download buttons |
+| Admin control | Super admin can manage users, deactivate users, and permanently delete accounts |
+| Reporting | Monthly collection, pending dues, yearly income, and expense summaries |
+
+---
+
+## Demo Workflows
+
+<p align="center">
+  <img src="docs/visuals/rentflow-workflows.svg" alt="RentFlow workflow visualization">
+</p>
+
+### 1. Flexible rent entry
+
+The payment flow is not capped to just the monthly rent. It supports:
+
+- normal monthly payment
+- same-month partial follow-up payment
+- manually added due
+- carried-forward previous pending
+- advance or extra payment
+- opening due while creating a tenant
+
+### 2. Voice-first actions
+
+The voice assistant is designed around how family members naturally speak:
+
+```text
+Room 103 ka 2500 rent add karo
+Rohit ko reminder bhejo
+Kaunse room ka rent pending hai?
+Jiska rent 2 mahine se pending hai
+Ramesh ka document dikhao
+Madan ka document upload karna hai
+Ramesh ko call lagao
+```
+
+The app previews the interpreted action before saving or launching external apps.
+
+### 3. WhatsApp reminders and QR
+
+RentFlow uses WhatsApp deep links for tenant reminders. The app can open the tenant chat with a pre-filled message and include the payment QR URL in the text. Receipt sharing can also attach QR images through the Android share sheet.
+
+WhatsApp still requires the user to press Send. That is intentional privacy behavior from WhatsApp.
+
+---
+
+## System Architecture
+
+<p align="center">
+  <img src="docs/visuals/rentflow-architecture.svg" alt="RentFlow architecture visualization">
+</p>
 
 ```mermaid
 flowchart LR
-    A[Family Member App] --> B[Flutter UI]
-    B --> C[Riverpod State]
-    C --> D[REST API via Dio]
-    C --> E[Socket.IO Client]
-    D --> F[Node.js + Express]
-    E --> F
-    F --> G[(MongoDB)]
-    F --> H[Cloudinary]
-    F --> I[Firebase Admin / FCM]
-    F --> J[PDFKit]
-    I --> K[Push Notifications]
-    F --> L[Railway Deployment]
+    A[Flutter Android App] --> B[Riverpod Providers]
+    B --> C[Dio REST API]
+    B --> D[Socket.IO Client]
+    C --> E[Node.js Express API]
+    D --> E
+    E --> F[(MongoDB Atlas)]
+    E --> G[Cloudinary]
+    E --> H[Firebase Admin FCM]
+    E --> I[PDFKit]
+    E --> J[Railway Runtime]
 ```
 
-### Daily Rent Flow
+### Live payment sequence
 
 ```mermaid
 sequenceDiagram
-    participant U as Family Member
-    participant A as Flutter App
+    participant User as Family Member
+    participant App as Flutter App
     participant API as Express API
     participant DB as MongoDB
-    participant S as Socket.IO
-    participant FCM as Firebase
+    participant Socket as Socket.IO
+    participant FCM as Firebase FCM
 
-    U->>A: Record rent payment
-    A->>API: POST /api/payments
-    API->>DB: Save payment / update month state
-    API->>S: Emit payment:new
-    API->>FCM: Send push to family devices
-    API-->>A: Payment + receipt data
-    S-->>A: Real-time UI refresh
+    User->>App: Records rent
+    App->>API: POST /api/payments
+    API->>DB: Save payment and state
+    API->>Socket: Emit payment:new
+    API->>FCM: Push family notification
+    API-->>App: Return payment and receipt
+    Socket-->>App: Refresh dashboard, rooms, payments
 ```
 
-### App Surface Map
+---
+
+## Product Map
 
 ```mermaid
 mindmap
   root((RentFlow))
     Dashboard
-      Collection overview
+      Dynamic greeting
       Payment calendar
-      Activity feed
-      Alerts
-      Notifications inbox
+      Notification inbox
+      Recent activity
+      Due alerts
     Rooms
-      Room list
-      Room detail
-      Add/edit room
-    Payments
-      Add payment
-      Partial follow-up payments
-      Receipts
-      WhatsApp share
+      Occupied and vacant states
+      Pending due filters
+      Room detail history
+      Photo upload
     Tenants
       Active and past tenants
+      Opening due
       Documents
-      Payment history
-    Expenses
-      Expense records
-      Bill upload
+      WhatsApp number
+      Call shortcut
+    Payments
+      Partial follow-up
+      Manual due
+      Carry forward
+      PDF receipt
+      QR and WhatsApp share
     Reports
       Monthly collection
-      Due summary
       Yearly trend
+      Due report
+      Expense mix
     Settings
-      Theme mode
-      Hindi support
+      System theme
+      Hindi and English
       Biometric lock
-      User management
+      Manage users
+      Activity log
 ```
-
----
-
-## Core Experience
-
-### What the app is optimized for
-
-- very fast rent entry on Android phones
-- non-technical family use
-- instant family-wide visibility
-- partial-payment tracking
-- room and tenant-level history
-- admin controls for cleanup and audit
-
-### What makes this app different from a generic CRUD demo
-
-- one shared family database
-- real-time sync with Socket.IO
-- push notifications through FCM
-- QR-assisted collection flow
-- carry-forward rent logic
-- monthly payment state with installment support
-- cache-first mobile loading for better perceived speed
-- Android biometric lock
-- bilingual support with English and Hindi
 
 ---
 
 ## Feature Highlights
 
-### Authentication and access
+### Mobile app
 
-- JWT-based authentication
-- seeded `super_admin` account
-- biometric unlock on supported Android devices
-- device token sync for push notifications
-- app follows system theme by default, with manual override
+- Flutter Android app with Riverpod state management.
+- GoRouter shell navigation with bottom tabs and detail routes.
+- System theme support, plus dark and light mode.
+- Hindi and English localization support.
+- Biometric app lock through `local_auth`.
+- Cache-first loading for dashboard, rooms, payments, and expenses.
+- Firebase Messaging setup for Android push notifications.
+- Voice assistant powered by speech recognition.
+- Document image/PDF viewer with download/share actions.
 
-### Dashboard
+### Backend
 
-- greeting with dynamic date and time
-- total collected / pending / expenses / occupancy overview
-- monthly collection chart
-- payment calendar with day markers
-- room quick-status strip
-- pending dues block
-- recent activity feed
-- in-app notification bell and inbox
+- Express API with MongoDB and Mongoose.
+- JWT auth with protected routes.
+- Super admin seed script.
+- Role-aware user management.
+- Socket.IO live events.
+- Cloudinary uploads for photos and documents.
+- PDFKit receipts and report generation.
+- Firebase Admin SDK push notification service.
+- Railway-ready deployment configuration.
 
-### Payments
+### Admin and safety
 
-- fast payment entry screen
-- room-aware prefills
-- same-month partial follow-up payments
-- remaining balance tracking
-- carried-forward dues into next month
-- PDF receipt generation
-- WhatsApp receipt sharing
-- QR code collection support
-
-### Rooms and tenants
-
-- room list with occupancy + due state
-- room detail and history
-- add/edit room
-- tenant detail with documents
-- upload tenant photos and PDFs
-- past tenant handling
-- permanent delete for admin cleanup
-
-### Expenses and reports
-
-- expense entry with bill image
-- expense category summary
-- monthly collection report export
-- due report
-- yearly income trend
-
-### Admin controls
-
-- manage family users
-- activity log timeline
-- erase timeline entries
-- permanent delete of tenant + linked data
-- super admin keeps role assignment control
+- Super admin can create and update family users.
+- Super admin can deactivate users without deleting history.
+- Super admin can permanently delete user accounts.
+- Super admin is protected from deletion and self-removal.
+- Activity logs preserve audit context for critical actions.
 
 ---
 
@@ -219,241 +221,92 @@ mindmap
 
 | Layer | Technology |
 |---|---|
-| Mobile App | Flutter |
-| State Management | `flutter_riverpod` |
-| Navigation | `go_router` |
-| Networking | `dio` |
-| Real-time | `socket_io_client` + `socket.io` |
-| Secure Storage | `flutter_secure_storage` |
-| Backend | Node.js + Express |
-| Database | MongoDB + Mongoose |
+| Mobile | Flutter |
+| State | `flutter_riverpod` |
+| Router | `go_router` |
+| HTTP | `dio` |
+| Real-time | `socket_io_client`, `socket.io` |
+| Storage | `flutter_secure_storage`, `shared_preferences` |
+| Backend | Node.js, Express |
+| Database | MongoDB, Mongoose |
 | Auth | JWT |
-| Push Notifications | Firebase Cloud Messaging |
-| Media Storage | Cloudinary |
-| PDF Generation | PDFKit |
-| Deployment | Railway |
+| Media | Cloudinary |
+| Push | Firebase Cloud Messaging |
+| PDF | PDFKit |
+| Deploy | Railway |
 
 ---
 
-## Repository Layout
+## Repository Structure
 
 ```text
 .
-├── assets/                      # app icon, QR and media assets
-├── android/                     # Android host app + Firebase config
-├── backend/                     # Express + MongoDB backend
-│   ├── src/
-│   │   ├── config/
-│   │   ├── controllers/
-│   │   ├── middleware/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   ├── scripts/
-│   │   ├── services/
-│   │   └── utils/
-│   └── DEPLOY_RAILWAY.md
-├── lib/
-│   ├── core/                    # theme, routing, localization, constants
-│   ├── data/                    # models, repositories, services
-│   └── features/                # auth, dashboard, rooms, payments, tenants, etc.
-├── pubspec.yaml
-├── package.json                 # Railway root launcher
-└── README.md
+|-- assets/                 # App icon, payment QR, static app assets
+|-- android/                # Android host project and Firebase config
+|-- backend/                # Express API
+|   |-- public/             # Public static files such as hosted QR image
+|   |-- src/
+|   |   |-- config/         # MongoDB, Cloudinary, Firebase config
+|   |   |-- controllers/    # Request handlers
+|   |   |-- middleware/     # Auth, roles, uploads, activity logging
+|   |   |-- models/         # Mongoose schemas
+|   |   |-- routes/         # API routes
+|   |   |-- scripts/        # Seed scripts
+|   |   |-- services/       # Socket, FCM, PDF, payment state
+|   |   `-- utils/          # Validators and response helpers
+|   `-- DEPLOY_RAILWAY.md
+|-- docs/
+|   `-- visuals/            # README demo SVG graphics
+|-- lib/
+|   |-- core/               # Theme, router, constants, localization, widgets
+|   |-- data/               # Models, repositories, API/socket/storage services
+|   `-- features/           # Auth, dashboard, rooms, tenants, payments, reports
+|-- pubspec.yaml
+|-- package.json            # Root Railway launcher
+`-- README.md
 ```
 
 ---
 
-## Architecture Notes
+## API Surface
 
-### Mobile architecture
-
-The Flutter app is organized into:
-
-- `core/` for shared theme, router, localization, constants, utilities
-- `data/` for repositories, models, transport services
-- `features/` for screen-level modules
-
-State is driven with Riverpod:
-
-- `NotifierProvider` and `AsyncNotifierProvider` for domain state
-- cache-first repositories for fast reloads
-- silent refreshes to avoid unnecessary skeleton flicker
-- socket-triggered background refresh for live updates
-
-### Backend architecture
-
-The backend follows a layered structure:
-
-- `routes` define API surfaces
-- `controllers` handle request logic
-- `models` define MongoDB schemas
-- `middleware` handles auth, roles, upload, logging
-- `services` handle notifications, sockets, PDFs, bootstrap
-
-### Performance decisions already applied
-
-- dashboard requests are fetched in parallel
-- caches are stored in `SharedPreferences`
-- screens reuse cached state before network refresh
-- Socket.IO updates refresh silently instead of resetting pages
-- logging is debug-only on the app side
+| Module | Endpoints |
+|---|---|
+| Auth | `POST /api/auth/login`, `GET /api/auth/me`, `PUT /api/auth/me/fcm-token`, `PUT /api/auth/me/password` |
+| Users | `GET /api/users`, `POST /api/users`, `PUT /api/users/:id`, `DELETE /api/users/:id`, `DELETE /api/users/:id?permanent=true` |
+| Rooms | `GET /api/rooms`, `GET /api/rooms/:id`, `POST /api/rooms`, `PUT /api/rooms/:id`, `DELETE /api/rooms/:id`, `POST /api/rooms/:id/photos` |
+| Tenants | `GET /api/tenants`, `GET /api/tenants/inactive`, `GET /api/tenants/:id`, `POST /api/tenants`, `PUT /api/tenants/:id`, `DELETE /api/tenants/:id`, `POST /api/tenants/:id/documents` |
+| Payments | `GET /api/payments`, `GET /api/payments/:id`, `POST /api/payments`, `PUT /api/payments/:id`, `DELETE /api/payments/:id`, `GET /api/payments/pending`, `GET /api/payments/:id/receipt` |
+| Expenses | `GET /api/expenses`, `POST /api/expenses`, `PUT /api/expenses/:id`, `DELETE /api/expenses/:id`, `GET /api/expenses/summary` |
+| Dashboard | `GET /api/dashboard/stats`, `GET /api/dashboard/monthly-chart`, `GET /api/dashboard/payment-calendar`, `GET /api/dashboard/recent-activity`, `GET /api/dashboard/upcoming-dues` |
+| Reports | `GET /api/reports/monthly-collection`, `GET /api/reports/yearly-income`, `GET /api/reports/tenant-history/:id`, `GET /api/reports/due-report` |
 
 ---
 
-## Real-Time Model
+## Real-Time Events
 
-The backend emits these live events:
+The backend emits live sync events when shared data changes:
 
-- `payment:new`
-- `room:updated`
-- `tenant:added`
-- `expense:added`
-
-The Flutter app listens and refreshes related providers so all family devices stay in sync.
-
----
-
-## Notification Model
-
-There are two kinds of notifications in RentFlow:
-
-### 1. OS push notifications
-
-Delivered through Firebase Cloud Messaging for:
-
-- payment recorded
-- due reminders
-- tenant added
-
-### 2. In-app notification center
-
-Visible inside the dashboard and notification inbox.
-
-Current implementation:
-
-- powered by the live activity timeline
-- unread state stored locally
-- badge count shown in the dashboard header
-
----
-
-## Platform Status
-
-### Working well now
-
-- Android app
-- Railway backend deployment
-- MongoDB-backed shared data
-- real-time sync
-- FCM wiring for Android
-- QR collection support
-- biometric lock
-- dark/light/system theme behavior
-- Hindi and English support
-
-### Important current scope
-
-- Android is the primary supported mobile target in this repository
-- iOS Firebase setup is not the active focus in the current state
-
----
-
-## Local Development
-
-## Prerequisites
-
-- Flutter SDK
-- Android Studio or VS Code
-- Node.js `20+`
-- npm `10+`
-- MongoDB Atlas or a reachable MongoDB instance
-- Firebase project for Android FCM
-- Cloudinary account
-
-## 1. Clone the repository
-
-```bash
-git clone https://github.com/yasuo72/RentFlow.git
-cd RentFlow
+```text
+payment:new
+room:updated
+tenant:added
+expense:added
 ```
 
-## 2. Install Flutter dependencies
-
-```bash
-flutter pub get
-```
-
-## 3. Install backend dependencies
-
-```bash
-cd backend
-npm install
-cd ..
-```
-
-## 4. Configure backend environment
-
-Create `backend/.env` from `backend/.env.example`.
-
-Required values:
-
-```env
-PORT=5000
-MONGODB_URI=your_mongodb_uri
-JWT_SECRET=your_secret
-JWT_EXPIRES_IN=30d
-CLIENT_URL=*
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_key
-CLOUDINARY_API_SECRET=your_secret
-SUPER_ADMIN_NAME=Owner
-SUPER_ADMIN_PHONE=your_phone
-SUPER_ADMIN_PASSWORD=your_password
-SUPER_ADMIN_EMAIL=your_email
-```
-
-Optional Firebase backend configuration:
-
-```env
-FIREBASE_SERVICE_ACCOUNT_JSON={...full_service_account_json...}
-```
-
-Do not commit real secrets.
-
-## 5. Configure Android Firebase
-
-Place:
-
-- `android/app/google-services.json`
-
-Make sure the Android package matches:
-
-- `com.rentflow.rentflow`
-
-## 6. Run the backend
-
-```bash
-cd backend
-npm run dev
-```
-
-## 7. Run the Flutter app
-
-```bash
-flutter run
-```
+The Flutter app listens through Socket.IO and refreshes related Riverpod providers so each phone stays current.
 
 ---
 
 ## Production Endpoint
 
-Current production backend target used by the mobile app:
+Current deployed backend:
 
 ```text
 https://rentflow-production-1.up.railway.app
 ```
 
-Health endpoint:
+Health check:
 
 ```text
 https://rentflow-production-1.up.railway.app/health
@@ -461,166 +314,107 @@ https://rentflow-production-1.up.railway.app/health
 
 ---
 
+## Local Development
+
+### Prerequisites
+
+- Flutter stable SDK
+- Android Studio or VS Code
+- Node.js `20+`
+- npm `10+`
+- MongoDB Atlas or another reachable MongoDB instance
+- Firebase Android project for FCM
+- Cloudinary account
+
+### 1. Install Flutter dependencies
+
+```bash
+flutter pub get
+```
+
+### 2. Install backend dependencies
+
+```bash
+cd backend
+npm install
+cd ..
+```
+
+### 3. Configure backend environment
+
+Create `backend/.env` from `backend/.env.example`.
+
+```env
+PORT=5000
+MONGODB_URI=your_mongodb_uri
+JWT_SECRET=your_long_random_secret
+JWT_EXPIRES_IN=30d
+CLIENT_URL=*
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_key
+CLOUDINARY_API_SECRET=your_cloudinary_secret
+FIREBASE_SERVICE_ACCOUNT_JSON={...optional_full_service_account_json...}
+SUPER_ADMIN_NAME=Owner
+SUPER_ADMIN_PHONE=your_phone
+SUPER_ADMIN_PASSWORD=your_password
+SUPER_ADMIN_EMAIL=your_email
+```
+
+Never commit real `.env` values or Firebase service account files.
+
+### 4. Configure Android Firebase
+
+Place the Android Firebase config here:
+
+```text
+android/app/google-services.json
+```
+
+The configured Android package is:
+
+```text
+com.rentflow.rentflow
+```
+
+### 5. Run backend
+
+```bash
+cd backend
+npm run dev
+```
+
+### 6. Run app
+
+```bash
+flutter run
+```
+
+---
+
 ## Railway Deployment
 
-The backend is prepared for Railway deployment.
+The backend is Railway-ready.
 
-### Why the repo has a root `package.json`
+Important deployment notes:
 
-Railway can deploy from the repo root, while still starting:
+- Railway should run the backend from `backend/` or through the root launcher.
+- `PORT` must come from Railway.
+- The server binds to `0.0.0.0`.
+- Use `FIREBASE_SERVICE_ACCOUNT_JSON` in Railway variables instead of a local Windows JSON path.
+- Run `npm install` whenever `backend/package.json` changes so `backend/package-lock.json` stays in sync for `npm ci`.
 
-- `backend/src/app.js`
+More detail:
 
-### Railway notes
-
-- backend listens on `0.0.0.0:$PORT`
-- CORS supports `CLIENT_URL`
-- super admin can auto-seed on boot
-- health path is `/health`
-- scheduled jobs should run on only one replica
-
-See:
-
-- [backend/DEPLOY_RAILWAY.md](backend/DEPLOY_RAILWAY.md)
+[backend/DEPLOY_RAILWAY.md](backend/DEPLOY_RAILWAY.md)
 
 ---
 
-## API Surface Summary
-
-### Auth
-
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-- `PUT /api/auth/me/fcm-token`
-- `PUT /api/auth/me/password`
-
-### Rooms
-
-- `GET /api/rooms`
-- `GET /api/rooms/:id`
-- `POST /api/rooms`
-- `PUT /api/rooms/:id`
-- `DELETE /api/rooms/:id`
-- `POST /api/rooms/:id/photos`
-
-### Tenants
-
-- `GET /api/tenants`
-- `GET /api/tenants/inactive`
-- `GET /api/tenants/:id`
-- `POST /api/tenants`
-- `PUT /api/tenants/:id`
-- `DELETE /api/tenants/:id`
-- `DELETE /api/tenants/:id/permanent`
-
-### Payments
-
-- `GET /api/payments`
-- `GET /api/payments/:id`
-- `POST /api/payments`
-- `PUT /api/payments/:id`
-- `DELETE /api/payments/:id`
-- `GET /api/payments/pending`
-- `GET /api/payments/summary/month`
-- `GET /api/payments/:id/receipt`
-
-### Expenses
-
-- `GET /api/expenses`
-- `POST /api/expenses`
-- `PUT /api/expenses/:id`
-- `DELETE /api/expenses/:id`
-- `GET /api/expenses/summary`
-
-### Dashboard
-
-- `GET /api/dashboard/stats`
-- `GET /api/dashboard/monthly-chart`
-- `GET /api/dashboard/payment-calendar`
-- `GET /api/dashboard/recent-activity`
-- `DELETE /api/dashboard/recent-activity/:id`
-- `DELETE /api/dashboard/recent-activity/by-user/:userId`
-- `GET /api/dashboard/upcoming-dues`
-
-### Reports
-
-- `GET /api/reports/monthly-collection`
-- `GET /api/reports/yearly-income`
-- `GET /api/reports/tenant-history/:id`
-- `GET /api/reports/due-report`
-
----
-
-## Security and Data Handling
-
-- JWT stored in secure storage on device
-- biometric app lock option on Android
-- backend role checks
-- rate-limited login route
-- Helmet enabled
-- CORS configured
-- Firebase Admin credentials supported through env vars
-- file uploads routed through Cloudinary
-
----
-
-## UX and Product Decisions
-
-### Why the Add Payment screen matters most
-
-This is the highest-frequency screen in the app.
-
-It is optimized for:
-
-- minimal typing
-- room-aware prefills
-- clear total / paid / remaining preview
-- fast method selection
-- immediate success confirmation
-
-### Why cache-first matters here
-
-Family utility apps feel “broken” when every screen goes blank during refresh.
-
-This project now prefers:
-
-- show the last known good data immediately
-- refresh quietly in the background
-- keep the app responsive while live data catches up
-
----
-
-## Current Limitations
-
-To keep the README honest, here are the important boundaries:
-
-- iOS is not the active fully-finished deployment target in the current repo state
-- some Hindi copy in older deep screens may still need cleanup for perfect localization quality
-- push notification delivery depends on valid FCM tokens and active backend Firebase credentials
-- first launch on a clean install still depends on network before caches exist
-
----
-
-## Suggested Next Enhancements
-
-- polished screenshot set for README and store listing
-- richer tenant analytics and occupancy forecasting
-- stronger offline mutation queue for add/edit actions
-- image compression pipeline before uploads
-- role audit export and backup restore flows
-- iOS Firebase and icon completion
-
----
-
-## Commands Cheat Sheet
+## Verification Commands
 
 ### Flutter
 
 ```bash
-flutter pub get
 flutter analyze
-flutter run
 flutter build apk --debug
 ```
 
@@ -628,23 +422,50 @@ flutter build apk --debug
 
 ```bash
 cd backend
-npm install
-npm run dev
+node --check src/app.js
+node --check src/controllers/users.controller.js
 npm start
-npm run seed:super-admin
 ```
 
-### Railway
+### Seed super admin
 
 ```bash
-npm start
+cd backend
+npm run seed:super-admin
 ```
 
 ---
 
-## Credits
+## Current Scope
 
-Built for practical family property management, with a product style that aims to feel modern, fast, and trustworthy instead of like a demo dashboard.
+RentFlow is currently optimized for Android. iOS files exist from Flutter scaffolding, but iOS Firebase setup is not the active production target right now.
 
-If you are extending this project, treat speed of use and clarity of state as first-class features.
+---
+
+## Security Notes
+
+- JWT is stored in encrypted device storage.
+- Login is rate-limited.
+- Helmet is enabled on the backend.
+- Role checks guard admin routes.
+- Super admin cannot delete or deactivate themselves.
+- Firebase Admin credentials should be provided through secure environment variables.
+- Cloudinary keys and MongoDB credentials must stay out of git history.
+
+---
+
+## Roadmap
+
+- Add polished real device screenshots after final UI pass.
+- Add offline mutation queue for rent entries made without network.
+- Add richer report cards and export presets.
+- Add image compression before document uploads.
+- Add backup and restore workflow.
+- Add complete iOS Firebase setup if iOS becomes a target.
+
+---
+
+## License
+
+Private family utility project unless a license is added later.
 

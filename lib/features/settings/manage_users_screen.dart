@@ -68,12 +68,11 @@ class ManageUsersScreen extends ConsumerWidget {
                   icon: Icons.group_off_rounded,
                 )
               else
-                ...users.map(
-                  (user) {
-                    final isProtectedUser =
-                        user.isSuperAdmin || user.id == currentUserId;
+                ...users.map((user) {
+                  final isProtectedUser =
+                      user.isSuperAdmin || user.id == currentUserId;
 
-                    return Padding(
+                  return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: AppSectionCard(
                       child: Column(
@@ -82,10 +81,14 @@ class ManageUsersScreen extends ConsumerWidget {
                             children: [
                               CircleAvatar(
                                 backgroundColor: user.isSuperAdmin
-                                    ? AppColors.primaryLight.withValues(alpha: 0.18)
+                                    ? AppColors.primaryLight.withValues(
+                                        alpha: 0.18,
+                                      )
                                     : AppColors.accent.withValues(alpha: 0.16),
                                 child: Text(
-                                  user.name.isEmpty ? '?' : user.name[0].toUpperCase(),
+                                  user.name.isEmpty
+                                      ? '?'
+                                      : user.name[0].toUpperCase(),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -95,12 +98,16 @@ class ManageUsersScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       user.name,
-                                      style: Theme.of(context).textTheme.titleMedium,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium,
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
                                       '${user.phone}${user.email?.isNotEmpty == true ? ' | ${user.email}' : ''}',
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                 ),
@@ -128,13 +135,20 @@ class ManageUsersScreen extends ConsumerWidget {
                                       canManageAccess: isSuperAdmin,
                                     );
                                   } else if (value == 'toggle') {
-                                    await ref.read(userRepositoryProvider).updateUser(
-                                      user.id,
-                                      {'isActive': !user.isActive},
-                                    );
+                                    await ref
+                                        .read(userRepositoryProvider)
+                                        .updateUser(user.id, {
+                                          'isActive': !user.isActive,
+                                        });
                                     ref.invalidate(manageUsersProvider);
                                   } else if (value == 'deactivate') {
-                                    await _confirmDeactivate(context, ref, user);
+                                    await _confirmDeactivate(
+                                      context,
+                                      ref,
+                                      user,
+                                    );
+                                  } else if (value == 'delete') {
+                                    await _confirmDelete(context, ref, user);
                                   }
                                 },
                                 itemBuilder: (context) => [
@@ -145,12 +159,36 @@ class ManageUsersScreen extends ConsumerWidget {
                                   if (isSuperAdmin && !isProtectedUser)
                                     PopupMenuItem(
                                       value: 'toggle',
-                                      child: Text(user.isActive ? 'Mark inactive' : 'Reactivate'),
+                                      child: Text(
+                                        user.isActive
+                                            ? 'Mark inactive'
+                                            : 'Reactivate',
+                                      ),
                                     ),
                                   if (isSuperAdmin && !isProtectedUser)
                                     const PopupMenuItem(
                                       value: 'deactivate',
                                       child: Text('Deactivate'),
+                                    ),
+                                  if (isSuperAdmin && !isProtectedUser)
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.delete_forever_rounded,
+                                            color: AppColors.danger,
+                                            size: 20,
+                                          ),
+                                          SizedBox(width: 10),
+                                          Text(
+                                            'Delete permanently',
+                                            style: TextStyle(
+                                              color: AppColors.danger,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                 ],
                               ),
@@ -163,7 +201,9 @@ class ManageUsersScreen extends ConsumerWidget {
                                 child: _DetailChip(
                                   label: 'Last login',
                                   value: user.lastLogin != null
-                                      ? AppDateUtils.formatDateTime(user.lastLogin)
+                                      ? AppDateUtils.formatDateTime(
+                                          user.lastLogin,
+                                        )
                                       : 'Never',
                                 ),
                               ),
@@ -171,7 +211,9 @@ class ManageUsersScreen extends ConsumerWidget {
                               Expanded(
                                 child: _DetailChip(
                                   label: 'Created',
-                                  value: AppDateUtils.formatDate(user.createdAt),
+                                  value: AppDateUtils.formatDate(
+                                    user.createdAt,
+                                  ),
                                 ),
                               ),
                             ],
@@ -180,8 +222,7 @@ class ManageUsersScreen extends ConsumerWidget {
                       ),
                     ),
                   );
-                  },
-                ),
+                }),
             ],
           ),
         ),
@@ -224,6 +265,55 @@ class ManageUsersScreen extends ConsumerWidget {
 
     await ref.read(userRepositoryProvider).deactivateUser(user.id);
     ref.invalidate(manageUsersProvider);
+  }
+
+  static Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    UserModel user,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${user.name} permanently?'),
+        content: const Text(
+          'This removes the login account completely and cannot be undone. Existing payment and activity records stay in the app for audit history.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      await ref.read(userRepositoryProvider).deleteUserPermanently(user.id);
+      ref.invalidate(manageUsersProvider);
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${user.name} was deleted permanently.')),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to delete user: $error')));
+    }
   }
 
   static Future<void> _showUserSheet(
@@ -413,8 +503,9 @@ class _UserEditorSheetState extends ConsumerState<_UserEditorSheet> {
               const SizedBox(height: 18),
               TextFormField(
                 controller: _nameController,
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Name is required.' : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Name is required.'
+                    : null,
                 decoration: const InputDecoration(labelText: 'Name'),
               ),
               const SizedBox(height: 14),
@@ -437,20 +528,21 @@ class _UserEditorSheetState extends ConsumerState<_UserEditorSheet> {
                 controller: _passwordController,
                 obscureText: true,
                 validator: (value) {
-                  if (!widget.isEditing && (value == null || value.trim().length < 6)) {
+                  if (!widget.isEditing &&
+                      (value == null || value.trim().length < 6)) {
                     return 'Password must be at least 6 characters.';
                   }
                   return null;
                 },
                 decoration: InputDecoration(
-                  labelText: widget.isEditing ? 'New password (optional)' : 'Password',
+                  labelText: widget.isEditing
+                      ? 'New password (optional)'
+                      : 'Password',
                 ),
               ),
-              if (
-                widget.isEditing &&
-                widget.canManageAccess &&
-                !widget.isProtectedAccount
-              ) ...[
+              if (widget.isEditing &&
+                  widget.canManageAccess &&
+                  !widget.isProtectedAccount) ...[
                 const SizedBox(height: 14),
                 SwitchListTile(
                   value: _isActive,

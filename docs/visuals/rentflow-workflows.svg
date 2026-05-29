@@ -1,0 +1,102 @@
+<svg width="1400" height="700" viewBox="0 0 1400 700" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1400" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8F9FC"/>
+      <stop offset="1" stop-color="#EDEFFF"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#161625"/>
+      <stop offset="1" stop-color="#0F1A2E"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6C63FF"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#00D9A3"/>
+      <stop offset="1" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#0F172A" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="700" rx="40" fill="url(#bg)"/>
+  <circle cx="1220" cy="120" r="190" fill="#6C63FF" opacity="0.10"/>
+  <circle cx="156" cy="586" r="210" fill="#00D9A3" opacity="0.12"/>
+
+  <text x="70" y="82" fill="#09090F" font-family="Sora, Inter, Arial" font-size="42" font-weight="850">Demo workflows and visual states</text>
+  <text x="70" y="122" fill="#5C5A7A" font-family="Inter, Arial" font-size="20" font-weight="500">Built around real family actions: collect rent, settle old dues, send reminders, and inspect documents.</text>
+
+  <g filter="url(#shadow)">
+    <g transform="translate(70 178)">
+      <rect width="370" height="430" rx="34" fill="#FFFFFF"/>
+      <rect x="26" y="26" width="318" height="96" rx="28" fill="url(#dark)"/>
+      <text x="52" y="62" fill="#A09EC0" font-family="Inter, Arial" font-size="14" font-weight="700">SMART COLLECTION</text>
+      <text x="52" y="98" fill="#FFFFFF" font-family="Sora, Inter, Arial" font-size="28" font-weight="800">Flexible rent entry</text>
+      <g transform="translate(34 152)">
+        <rect width="302" height="66" rx="20" fill="#F4F5FF" stroke="#DDE0F0"/>
+        <text x="22" y="28" fill="#5C5A7A" font-family="Inter, Arial" font-size="14">Monthly rent</text>
+        <text x="208" y="43" fill="#09090F" font-family="Sora, Inter, Arial" font-size="22" font-weight="800">INR 2,500</text>
+        <rect y="82" width="302" height="66" rx="20" fill="#FFF8E6" stroke="#FFE5A3"/>
+        <text x="22" y="110" fill="#8A6A00" font-family="Inter, Arial" font-size="14">Old due added</text>
+        <text x="208" y="125" fill="#F59E0B" font-family="Sora, Inter, Arial" font-size="22" font-weight="800">INR 5,000</text>
+        <rect y="164" width="302" height="66" rx="20" fill="#EAFBF6" stroke="#BDF3DF"/>
+        <text x="22" y="192" fill="#0F6B54" font-family="Inter, Arial" font-size="14">Paid today</text>
+        <text x="208" y="207" fill="#10B981" font-family="Sora, Inter, Arial" font-size="22" font-weight="800">INR 3,000</text>
+      </g>
+      <rect x="34" y="344" width="302" height="52" rx="18" fill="url(#purple)"/>
+      <text x="124" y="378" fill="#FFFFFF" font-family="Inter, Arial" font-size="17" font-weight="850">Save payment</text>
+    </g>
+
+    <g transform="translate(514 178)">
+      <rect width="370" height="430" rx="34" fill="#111120"/>
+      <text x="32" y="50" fill="#FFFFFF" font-family="Sora, Inter, Arial" font-size="28" font-weight="800">Reports dashboard</text>
+      <text x="32" y="82" fill="#A09EC0" font-family="Inter, Arial" font-size="16">Collected vs pending, month by month.</text>
+      <g transform="translate(32 122)">
+        <rect width="142" height="86" rx="22" fill="#00D9A3" fill-opacity="0.14"/>
+        <text x="20" y="32" fill="#A09EC0" font-family="Inter, Arial" font-size="14">Collected</text>
+        <text x="20" y="64" fill="#00D9A3" font-family="Sora, Inter, Arial" font-size="26" font-weight="850">42.5k</text>
+        <rect x="164" width="142" height="86" rx="22" fill="#FFB800" fill-opacity="0.14"/>
+        <text x="184" y="32" fill="#A09EC0" font-family="Inter, Arial" font-size="14">Pending</text>
+        <text x="184" y="64" fill="#FFB800" font-family="Sora, Inter, Arial" font-size="26" font-weight="850">15.5k</text>
+      </g>
+      <g transform="translate(36 250)">
+        <rect x="0" y="84" width="18" height="56" rx="9" fill="#00D9A3"/>
+        <rect x="24" y="112" width="18" height="28" rx="9" fill="#FFB800"/>
+        <rect x="62" y="42" width="18" height="98" rx="9" fill="#00D9A3"/>
+        <rect x="86" y="94" width="18" height="46" rx="9" fill="#FFB800"/>
+        <rect x="124" y="10" width="18" height="130" rx="9" fill="#00D9A3"/>
+        <rect x="148" y="74" width="18" height="66" rx="9" fill="#FFB800"/>
+        <rect x="186" y="72" width="18" height="68" rx="9" fill="#00D9A3"/>
+        <rect x="210" y="108" width="18" height="32" rx="9" fill="#FFB800"/>
+        <rect x="248" y="30" width="18" height="110" rx="9" fill="#00D9A3"/>
+        <rect x="272" y="102" width="18" height="38" rx="9" fill="#FFB800"/>
+        <line x1="0" y1="154" x2="300" y2="154" stroke="#FFFFFF" stroke-opacity="0.10"/>
+      </g>
+      <text x="42" y="386" fill="#A09EC0" font-family="Inter, Arial" font-size="15">Tap a month to inspect dues, reports, and trends.</text>
+    </g>
+
+    <g transform="translate(958 178)">
+      <rect width="370" height="430" rx="34" fill="#FFFFFF"/>
+      <text x="32" y="50" fill="#09090F" font-family="Sora, Inter, Arial" font-size="28" font-weight="850">Reminder kit</text>
+      <text x="32" y="82" fill="#5C5A7A" font-family="Inter, Arial" font-size="16">WhatsApp, QR, documents, and voice.</text>
+      <g transform="translate(32 126)">
+        <rect width="306" height="92" rx="24" fill="#EAFBF6" stroke="#BDF3DF"/>
+        <text x="22" y="34" fill="#0F6B54" font-family="Inter, Arial" font-size="15" font-weight="800">WhatsApp message</text>
+        <text x="22" y="62" fill="#09090F" font-family="Inter, Arial" font-size="15">Namaste Rohit ji, Room 102 rent due.</text>
+        <rect y="112" width="142" height="142" rx="26" fill="#F4F5FF" stroke="#DDE0F0"/>
+        <rect x="28" y="140" width="22" height="22" fill="#09090F"/>
+        <rect x="68" y="140" width="46" height="22" fill="#09090F"/>
+        <rect x="28" y="182" width="46" height="46" fill="#09090F"/>
+        <rect x="92" y="182" width="22" height="22" fill="#09090F"/>
+        <rect x="92" y="222" width="22" height="22" fill="#09090F"/>
+        <text x="166" y="150" fill="#5C5A7A" font-family="Inter, Arial" font-size="14">Payment QR</text>
+        <text x="166" y="182" fill="#09090F" font-family="Sora, Inter, Arial" font-size="22" font-weight="800">Scan and pay</text>
+        <text x="166" y="214" fill="#5C5A7A" font-family="Inter, Arial" font-size="14">Receipt can attach QR image.</text>
+        <rect y="280" width="306" height="62" rx="20" fill="url(#purple)"/>
+        <text x="34" y="318" fill="#FFFFFF" font-family="Inter, Arial" font-size="17" font-weight="850">"Rohit ko reminder bhejo"</text>
+      </g>
+    </g>
+  </g>
+</svg>

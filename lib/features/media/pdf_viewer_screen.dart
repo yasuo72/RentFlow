@@ -6,6 +6,8 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'document_download_service.dart';
+
 class PdfViewerScreen extends StatefulWidget {
   const PdfViewerScreen({
     required this.documentUrl,
@@ -22,6 +24,7 @@ class PdfViewerScreen extends StatefulWidget {
 
 class _PdfViewerScreenState extends State<PdfViewerScreen> {
   late final Future<String?> _pdfPathFuture = _downloadPdf();
+  bool _downloading = false;
 
   Future<String?> _downloadPdf() async {
     if (widget.documentUrl.isEmpty) {
@@ -55,6 +58,35 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  Future<void> _downloadForSaving() async {
+    setState(() => _downloading = true);
+
+    try {
+      final path = await _pdfPathFuture;
+      if (path == null) {
+        throw StateError('PDF is not available.');
+      }
+
+      await DocumentDownloadService.shareLocalFile(
+        path: path,
+        title: widget.title,
+        mimeType: 'application/pdf',
+        extension: '.pdf',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Unable to download PDF: $error')));
+    } finally {
+      if (mounted) {
+        setState(() => _downloading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,6 +94,20 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         title: Text(widget.title),
         actions: [
           IconButton(
+            tooltip: 'Download',
+            onPressed: widget.documentUrl.isEmpty || _downloading
+                ? null
+                : _downloadForSaving,
+            icon: _downloading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.download_rounded),
+          ),
+          IconButton(
+            tooltip: 'Open externally',
             onPressed: _openExternally,
             icon: const Icon(Icons.open_in_new_rounded),
           ),

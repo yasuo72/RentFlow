@@ -118,6 +118,7 @@ async function updateUser(req, res) {
 }
 
 async function deleteUser(req, res) {
+  const permanent = req.query.permanent === 'true';
   const user = await User.findById(req.params.id);
 
   if (!user) {
@@ -130,7 +131,9 @@ async function deleteUser(req, res) {
   if (String(user._id) === String(req.user._id)) {
     return sendError(res, {
       statusCode: 400,
-      message: 'You cannot deactivate your own account.',
+      message: permanent
+        ? 'You cannot permanently delete your own account.'
+        : 'You cannot deactivate your own account.',
     });
   }
 
@@ -138,6 +141,24 @@ async function deleteUser(req, res) {
     return sendError(res, {
       statusCode: 400,
       message: 'The super admin account cannot be removed.',
+    });
+  }
+
+  if (permanent) {
+    const deletedUserId = user._id;
+    const deletedUserName = user.name;
+
+    await user.deleteOne();
+
+    await req.logActivity({
+      action: 'USER_DELETED',
+      details: `Permanently deleted user ${deletedUserName}.`,
+      entityType: 'user',
+      entityId: deletedUserId,
+    });
+
+    return sendSuccess(res, {
+      message: 'User deleted permanently.',
     });
   }
 

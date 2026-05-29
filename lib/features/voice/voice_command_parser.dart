@@ -85,6 +85,9 @@ class VoiceCommandParser {
     }
 
     final tenant = _matchTenant(normalized, tenants);
+    final matchedRoom = _matchRoom(normalized, rooms);
+    final roomTenant = _tenantForRoom(matchedRoom, tenants);
+    final commandTenant = tenant ?? roomTenant;
     final documentType = _documentTypeFor(normalized);
 
     if (_isMissingDocumentsQuery(normalized)) {
@@ -101,43 +104,83 @@ class VoiceCommandParser {
       return VoiceCommandIntent(
         type: VoiceCommandType.uploadDocument,
         transcript: transcript,
-        tenant: tenant,
+        tenant: commandTenant,
         documentType: type,
-        route: tenant == null
+        route: commandTenant == null
             ? null
-            : '/tenant-document-upload/${tenant.id}?type=$type',
-        message: tenant == null
+            : '/tenant-document-upload/${commandTenant.id}?type=$type',
+        message: commandTenant == null
             ? 'I heard document upload, but not the tenant name.'
-            : 'Upload page will open for ${tenant.fullName}.',
+            : 'Upload page will open for ${commandTenant.fullName}.',
       );
     }
 
     if (_isDocumentCommand(normalized)) {
-      final document = tenant == null
-          ? null
-          : _documentFor(tenant: tenant, documentType: documentType);
+      if (commandTenant == null) {
+        return VoiceCommandIntent(
+          type: VoiceCommandType.navigate,
+          transcript: transcript,
+          route: '/tenants',
+          message:
+              'I heard document, but not the tenant name. Opening tenant list.',
+        );
+      }
+
+      final document = _documentFor(
+        tenant: commandTenant,
+        documentType: documentType,
+      );
+
+      if (document == null) {
+        final type = documentType == null || documentType == 'document'
+            ? 'other'
+            : documentType;
+        return VoiceCommandIntent(
+          type: VoiceCommandType.uploadDocument,
+          transcript: transcript,
+          tenant: commandTenant,
+          documentType: type,
+          route: '/tenant-document-upload/${commandTenant.id}?type=$type',
+          message:
+              '${commandTenant.fullName} ke ${documentType ?? 'document'} uploaded nahi hain. Upload page open hoga.',
+        );
+      }
 
       return VoiceCommandIntent(
         type: VoiceCommandType.openDocument,
         transcript: transcript,
-        tenant: tenant,
+        tenant: commandTenant,
         document: document,
         documentType: documentType,
-        message: tenant == null
-            ? 'I heard document, but not the tenant name.'
-            : document == null
-            ? '${tenant.fullName} ke ${documentType ?? 'document'} not uploaded yet.'
-            : null,
       );
     }
 
-    if (tenant != null && _isWhatsAppReminderCommand(normalized)) {
+    if (commandTenant != null && _isTenantDetailCommand(normalized)) {
+      return VoiceCommandIntent(
+        type: VoiceCommandType.navigate,
+        transcript: transcript,
+        tenant: commandTenant,
+        route: '/tenants/${commandTenant.id}',
+        message: '${commandTenant.fullName} profile will open.',
+      );
+    }
+
+    if (_isPaymentQrCommand(normalized)) {
+      return VoiceCommandIntent(
+        type: VoiceCommandType.navigate,
+        transcript: transcript,
+        route: '/payment-qr',
+        message: 'Payment QR will open.',
+      );
+    }
+
+    if (commandTenant != null && _isWhatsAppReminderCommand(normalized)) {
       return VoiceCommandIntent(
         type: VoiceCommandType.sendWhatsAppReminder,
         transcript: transcript,
-        tenant: tenant,
+        tenant: commandTenant,
         amount: _amountFor(normalized),
-        message: 'WhatsApp reminder will open for ${tenant.fullName}.',
+        message: 'WhatsApp reminder will open for ${commandTenant.fullName}.',
       );
     }
 
@@ -145,8 +188,8 @@ class VoiceCommandParser {
       return VoiceCommandIntent(
         type: VoiceCommandType.callTenant,
         transcript: transcript,
-        tenant: tenant,
-        message: tenant == null
+        tenant: commandTenant,
+        message: commandTenant == null
             ? 'I heard call, but not the tenant name.'
             : null,
       );
@@ -171,7 +214,7 @@ class VoiceCommandParser {
       );
     }
 
-    final room = _matchRoom(normalized, rooms);
+    final room = matchedRoom;
     final amount = _amountFor(normalized, roomNumber: room?.roomNumber);
 
     if (_isExpenseCommand(normalized)) {
@@ -218,6 +261,24 @@ class VoiceCommandParser {
       transcript: transcript,
       message: 'Try saying: "Room 101 ka 2500 cash payment add karo".',
     );
+  }
+
+  static TenantModel? _tenantForRoom(
+    RoomModel? room,
+    List<TenantModel> tenants,
+  ) {
+    final roomTenantId = room?.currentTenant?.id;
+    if (roomTenantId == null || roomTenantId.isEmpty) {
+      return null;
+    }
+
+    for (final tenant in tenants) {
+      if (tenant.id == roomTenantId) {
+        return tenant;
+      }
+    }
+
+    return null;
   }
 
   static String _roomOrAmountMessage(RoomModel? room, num? amount) {
@@ -372,6 +433,10 @@ class VoiceCommandParser {
       final aliases = switch (documentType) {
         'aadhaar' => const ['aadhaar', 'aadhar', 'adhar'],
         'id' => const ['id', 'identity', 'proof'],
+        'pan' => const ['pan'],
+        'police' => const ['police', 'verification'],
+        'agreement' => const ['agreement', 'rent agreement'],
+        'profile_photo' => const ['photo', 'profile', 'image'],
         _ => [documentType],
       };
       if (aliases.any(haystack.contains)) {
@@ -499,9 +564,18 @@ class VoiceCommandParser {
           'document',
           'documents',
           'doc',
+          'file',
+          'files',
+          'paper',
+          'papers',
           'photo',
+          'image',
+          'proof',
           'id card',
           'id proof',
+          'pan',
+          'pan card',
+          'police verification',
           'आधार',
           'एग्रीमेंट',
           'दस्तावेज',
@@ -509,9 +583,14 @@ class VoiceCommandParser {
         ]) &&
         _containsAny(text, const [
           'show',
+          'view',
+          'see',
           'open',
           'dikhao',
+          'dikhana',
+          'dikha do',
           'kholo',
+          'khol do',
           'दिखाओ',
           'खोल',
         ]);
@@ -522,11 +601,19 @@ class VoiceCommandParser {
           'document',
           'documents',
           'doc',
+          'file',
+          'files',
+          'paper',
+          'papers',
           'aadhaar',
           'aadhar',
           'adhar',
           'agreement',
           'photo',
+          'image',
+          'pan',
+          'pan card',
+          'police verification',
           'दस्तावेज',
           'डॉक्यूमेंट',
           'आधार',
@@ -536,9 +623,13 @@ class VoiceCommandParser {
           'upload',
           'add',
           'attach',
+          'daal',
+          'dalo',
+          'dalna',
           'lagana',
           'lagao',
           'karna',
+          'rakhna',
           'save',
           'अपलोड',
           'लगाना',
@@ -553,10 +644,18 @@ class VoiceCommandParser {
       'document',
       'documents',
       'doc',
+      'file',
+      'files',
+      'paper',
+      'papers',
       'aadhaar',
       'aadhar',
       'adhar',
       'agreement',
+      'photo',
+      'pan',
+      'pan card',
+      'police verification',
       'दस्तावेज',
       'डॉक्यूमेंट',
       'आधार',
@@ -581,6 +680,7 @@ class VoiceCommandParser {
       'which',
       'show',
       'dikhao',
+      'dikhana',
       'list',
       'कौन',
       'दिखाओ',
@@ -643,6 +743,71 @@ class VoiceCommandParser {
     return asksToSend && rentContext;
   }
 
+  static bool _isTenantDetailCommand(String text) {
+    final talksAboutTenant = _containsAny(text, const [
+      'tenant',
+      'kirayedar',
+      'person',
+      'profile',
+      'detail',
+      'details',
+      'history',
+      'record',
+      'info',
+      'information',
+      'à¤•à¤¿à¤°à¤¾à¤¯à¥‡à¤¦à¤¾à¤°',
+    ]);
+    final asksToOpen = _containsAny(text, const [
+      'show',
+      'view',
+      'open',
+      'dikhao',
+      'dikhana',
+      'kholo',
+      'dikhana',
+      'khol do',
+      'add',
+      'new',
+      'create',
+      'khol do',
+      'add',
+      'new',
+      'create',
+      'profile',
+      'detail',
+      'details',
+      'history',
+      'record',
+      'info',
+    ]);
+
+    return talksAboutTenant && asksToOpen;
+  }
+
+  static bool _isPaymentQrCommand(String text) {
+    final talksAboutQr = _containsAny(text, const [
+      'qr',
+      'q r',
+      'payment qr',
+      'upi qr',
+      'scanner',
+      'scan code',
+      'code',
+    ]);
+    final asksToOpen = _containsAny(text, const [
+      'show',
+      'view',
+      'open',
+      'dikhao',
+      'dikhana',
+      'kholo',
+      'bhejo',
+      'send',
+    ]);
+
+    return talksAboutQr && asksToOpen;
+  }
+
   static String _paymentMethodFor(String text) {
     if (_containsAny(text, const [
       'upi',
@@ -695,6 +860,29 @@ class VoiceCommandParser {
   }
 
   static String? _documentTypeFor(String text) {
+    if (_containsAny(text, const [
+      'aadhaar card',
+      'aadhar card',
+      'adhar card',
+    ])) {
+      return 'aadhaar';
+    }
+    if (_containsAny(text, const ['rent agreement', 'kiraya agreement'])) {
+      return 'agreement';
+    }
+    if (_containsAny(text, const ['pan', 'pan card'])) {
+      return 'pan';
+    }
+    if (_containsAny(text, const ['police', 'verification'])) {
+      return 'police';
+    }
+    if (_containsAny(text, const ['image', 'profile photo'])) {
+      return 'profile_photo';
+    }
+    if (_containsAny(text, const ['identity'])) {
+      return 'id';
+    }
+
     if (_containsAny(text, const ['aadhaar', 'aadhar', 'adhar', 'आधार'])) {
       return 'aadhaar';
     }
