@@ -34,6 +34,15 @@ const paymentSchema = new mongoose.Schema({
     default: 0,
     min: 0,
   },
+  manualDueAmount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  manualDueRemark: {
+    type: String,
+    trim: true,
+  },
   amountPaid: {
     type: Number,
     required: true,
@@ -42,6 +51,11 @@ const paymentSchema = new mongoose.Schema({
   remainingAmount: {
     type: Number,
     required: true,
+    min: 0,
+  },
+  advanceAmount: {
+    type: Number,
+    default: 0,
     min: 0,
   },
   paymentMethod: {

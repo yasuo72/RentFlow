@@ -25,6 +25,7 @@ import '../../features/settings/settings_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/tenants/add_edit_tenant_screen.dart';
 import '../../features/tenants/tenant_detail_screen.dart';
+import '../../features/tenants/tenant_document_upload_screen.dart';
 import '../../features/tenants/tenants_list_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -58,7 +59,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/rooms',
-                builder: (context, state) => const RoomsListScreen(),
+                builder: (context, state) => RoomsListScreen(
+                  initialFilter: state.uri.queryParameters['filter'],
+                ),
                 routes: [
                   GoRoute(
                     path: 'new',
@@ -184,6 +187,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/payment-qr',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const PaymentQrScreen(),
+      ),
+      GoRoute(
+        path: '/tenant-document-upload/:id',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => TenantDocumentUploadScreen(
+          tenantId: state.pathParameters['id']!,
+          initialType: state.uri.queryParameters['type'],
+        ),
       ),
       GoRoute(
         path: '/notifications',

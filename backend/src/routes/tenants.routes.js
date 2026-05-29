@@ -19,6 +19,7 @@ const {
   body,
   handleValidationErrors,
   mongoIdParam,
+  positiveNumberBody,
 } = require('../utils/validators');
 
 const router = express.Router();
@@ -39,6 +40,7 @@ router.post(
     body('phone').notEmpty().withMessage('Phone is required.'),
     body('joiningDate').notEmpty().withMessage('Joining date is required.'),
     body('room').isMongoId().withMessage('Room is required.'),
+    positiveNumberBody('openingDueAmount').optional(),
     handleValidationErrors,
   ],
   asyncHandler(createTenant),

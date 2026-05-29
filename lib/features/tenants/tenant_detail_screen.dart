@@ -35,6 +35,8 @@ class TenantDetailScreen extends ConsumerWidget {
               onSelected: (value) async {
                 if (value == 'edit') {
                   context.push('/tenants/new?tenantId=${item.id}');
+                } else if (value == 'documents') {
+                  context.push('/tenant-document-upload/${item.id}');
                 } else if (value == 'leave') {
                   final confirmed = await showDialog<bool>(
                     context: context,
@@ -95,7 +97,9 @@ class TenantDetailScreen extends ConsumerWidget {
                   );
 
                   if (confirmed == true) {
-                    await ref.read(tenantRepositoryProvider).purgeTenant(item.id);
+                    await ref
+                        .read(tenantRepositoryProvider)
+                        .purgeTenant(item.id);
                     ref.invalidate(tenantsProvider);
                     ref.invalidate(inactiveTenantsProvider);
                     ref.invalidate(paymentsProvider);
@@ -109,7 +113,14 @@ class TenantDetailScreen extends ConsumerWidget {
               },
               itemBuilder: (context) => [
                 const PopupMenuItem(value: 'edit', child: Text('Edit tenant')),
-                const PopupMenuItem(value: 'leave', child: Text('Mark as left')),
+                const PopupMenuItem(
+                  value: 'documents',
+                  child: Text('Upload documents'),
+                ),
+                const PopupMenuItem(
+                  value: 'leave',
+                  child: Text('Mark as left'),
+                ),
                 if (isSuperAdmin)
                   const PopupMenuItem(
                     value: 'delete',
@@ -140,6 +151,12 @@ class TenantDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   _DetailRow(label: 'Phone', value: item.phone),
                   _DetailRow(
+                    label: 'WhatsApp',
+                    value: item.whatsappNumber?.isNotEmpty == true
+                        ? item.whatsappNumber!
+                        : '${item.phone} (primary)',
+                  ),
+                  _DetailRow(
                     label: 'Alternate phone',
                     value: item.alternatePhone ?? '-',
                   ),
@@ -155,6 +172,30 @@ class TenantDetailScreen extends ConsumerWidget {
                     label: 'Permanent address',
                     value: item.permanentAddress ?? '-',
                   ),
+                  if (item.openingDueAmount > 0)
+                    _DetailRow(
+                      label: 'Opening due at registration',
+                      value: CurrencyFormatter.inr(item.openingDueAmount),
+                    ),
+                  if (item.currentMonthPayment != null) ...[
+                    _DetailRow(
+                      label: 'This month total payable',
+                      value: CurrencyFormatter.inr(
+                        item.currentMonthPayment!.totalDue,
+                      ),
+                    ),
+                    _DetailRow(
+                      label: 'This month remaining',
+                      value: CurrencyFormatter.inr(
+                        item.currentMonthPayment!.remainingAmount,
+                      ),
+                    ),
+                  ],
+                  if ((item.openingDueRemark ?? '').isNotEmpty)
+                    _DetailRow(
+                      label: 'Opening due reason',
+                      value: item.openingDueRemark!,
+                    ),
                   _DetailRow(
                     label: 'Emergency contact',
                     value: item.emergencyContact == null
@@ -266,7 +307,9 @@ class TenantDetailScreen extends ConsumerWidget {
                                       ),
                                       Text(
                                         payment.recordedByName ?? '-',
-                                        style: Theme.of(context).textTheme.bodySmall,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
                                       ),
                                     ],
                                   ),
@@ -278,13 +321,19 @@ class TenantDetailScreen extends ConsumerWidget {
                                     const SizedBox(height: 4),
                                     Text(
                                       payment.remark!,
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                   const SizedBox(height: 6),
                                   Text(
-                                    AppDateUtils.formatDate(payment.paymentDate),
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    AppDateUtils.formatDate(
+                                      payment.paymentDate,
+                                    ),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                 ],
                               ),
@@ -309,17 +358,11 @@ class TenantDetailScreen extends ConsumerWidget {
     final uri = _isImageDocument(document)
         ? Uri(
             path: '/viewer/image',
-            queryParameters: {
-              'url': document.url,
-              'title': document.name,
-            },
+            queryParameters: {'url': document.url, 'title': document.name},
           )
         : Uri(
             path: '/viewer/pdf',
-            queryParameters: {
-              'url': document.url,
-              'title': document.name,
-            },
+            queryParameters: {'url': document.url, 'title': document.name},
           );
 
     context.push(uri.toString());
@@ -436,17 +479,15 @@ class _HeaderBlock extends StatelessWidget {
 }
 
 class _DocumentTile extends StatelessWidget {
-  const _DocumentTile({
-    required this.document,
-    required this.onTap,
-  });
+  const _DocumentTile({required this.document, required this.onTap});
 
   final TenantDocument document;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final isImage = document.type == 'photo' ||
+    final isImage =
+        document.type == 'photo' ||
         document.url.toLowerCase().endsWith('.jpg') ||
         document.url.toLowerCase().endsWith('.jpeg') ||
         document.url.toLowerCase().endsWith('.png') ||

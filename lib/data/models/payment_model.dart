@@ -56,6 +56,9 @@ class PaymentModel {
     this.paymentDate,
     this.isPartialPayment = false,
     this.carriedForwardAmount = 0,
+    this.manualDueAmount = 0,
+    this.manualDueRemark,
+    this.advanceAmount = 0,
     this.entries = const [],
   });
 
@@ -74,9 +77,12 @@ class PaymentModel {
   final DateTime? paymentDate;
   final bool isPartialPayment;
   final num carriedForwardAmount;
+  final num manualDueAmount;
+  final String? manualDueRemark;
+  final num advanceAmount;
   final List<PaymentEntryModel> entries;
 
-  num get totalDue => amountPaid + remainingAmount;
+  num get totalDue => monthlyRentDue + carriedForwardAmount + manualDueAmount;
 
   factory PaymentModel.fromJson(Map<String, dynamic> json) {
     final parsedEntries = (json['entries'] as List<dynamic>? ?? const [])
@@ -108,6 +114,9 @@ class PaymentModel {
           : null,
       isPartialPayment: json['isPartialPayment'] as bool? ?? false,
       carriedForwardAmount: json['carriedForwardAmount'] as num? ?? 0,
+      manualDueAmount: json['manualDueAmount'] as num? ?? 0,
+      manualDueRemark: json['manualDueRemark'] as String?,
+      advanceAmount: json['advanceAmount'] as num? ?? 0,
       entries: parsedEntries.isNotEmpty
           ? parsedEntries
           : [
@@ -119,7 +128,9 @@ class PaymentModel {
                     : null,
                 remark: json['remark'] as String?,
                 recordedBy: json['recordedBy'] is Map<String, dynamic>
-                    ? UserModel.fromJson(json['recordedBy'] as Map<String, dynamic>)
+                    ? UserModel.fromJson(
+                        json['recordedBy'] as Map<String, dynamic>,
+                      )
                     : null,
               ),
             ],
@@ -142,6 +153,9 @@ class PaymentModel {
     'paymentDate': paymentDate?.toIso8601String(),
     'isPartialPayment': isPartialPayment,
     'carriedForwardAmount': carriedForwardAmount,
+    'manualDueAmount': manualDueAmount,
+    'manualDueRemark': manualDueRemark,
+    'advanceAmount': advanceAmount,
     'entries': entries.map((entry) => entry.toJson()).toList(),
   };
 }

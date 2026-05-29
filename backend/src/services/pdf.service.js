@@ -28,6 +28,11 @@ function buildPdfBuffer(draw) {
 
 async function generatePaymentReceipt(payment) {
   return buildPdfBuffer((doc) => {
+    const totalDue =
+      Number(payment.monthlyRentDue || 0) +
+      Number(payment.carriedForwardAmount || 0) +
+      Number(payment.manualDueAmount || 0);
+
     doc.fontSize(24).fillColor('#3730A3').text('RentFlow', { align: 'left' });
     doc.moveDown(0.3);
     doc.fontSize(18).fillColor('#111827').text('Payment Receipt');
@@ -39,8 +44,12 @@ async function generatePaymentReceipt(payment) {
       ['Tenant', payment.tenant?.fullName || '-'],
       ['Month', payment.month],
       ['Monthly Rent', formatCurrency(payment.monthlyRentDue)],
+      ['Carried Forward', formatCurrency(payment.carriedForwardAmount)],
+      ['Manual Extra Due', formatCurrency(payment.manualDueAmount)],
+      ['Total Due', formatCurrency(totalDue)],
       ['Amount Paid', formatCurrency(payment.amountPaid)],
       ['Remaining', formatCurrency(payment.remainingAmount)],
+      ['Advance', formatCurrency(payment.advanceAmount)],
       ['Payment Method', payment.paymentMethod],
       ['Payment Date', new Date(payment.paymentDate).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })],
       ['Remark', payment.remark || '-'],
@@ -70,8 +79,12 @@ async function generateMonthlyCollectionReport({ month, year, payments, totals }
     doc.moveDown();
 
     payments.forEach((payment) => {
+      const totalDue =
+        Number(payment.monthlyRentDue || 0) +
+        Number(payment.carriedForwardAmount || 0) +
+        Number(payment.manualDueAmount || 0);
       doc.fontSize(12).fillColor('#111827').text(
-        `Room ${payment.room?.roomNumber || '-'} | ${payment.tenant?.fullName || '-'} | Paid ${formatCurrency(payment.amountPaid)} | Remaining ${formatCurrency(payment.remainingAmount)}`,
+        `Room ${payment.room?.roomNumber || '-'} | ${payment.tenant?.fullName || '-'} | Total ${formatCurrency(totalDue)} | Paid ${formatCurrency(payment.amountPaid)} | Remaining ${formatCurrency(payment.remainingAmount)} | Advance ${formatCurrency(payment.advanceAmount)}`,
       );
       doc.moveDown(0.4);
     });

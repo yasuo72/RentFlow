@@ -47,6 +47,7 @@ router.post(
     body('tenant').isMongoId().withMessage('Tenant is required.'),
     body('room').isMongoId().withMessage('Room is required.'),
     positiveNumberBody('amountPaid'),
+    positiveNumberBody('manualDueAmount').optional(),
     body('paymentMethod').optional().isIn(['cash', 'upi', 'bank_transfer', 'card', 'other']),
     handleValidationErrors,
   ],
@@ -57,6 +58,7 @@ router.put(
   [
     mongoIdParam(),
     positiveNumberBody('amountPaid').optional(),
+    positiveNumberBody('manualDueAmount').optional(),
     handleValidationErrors,
   ],
   asyncHandler(editPayment),

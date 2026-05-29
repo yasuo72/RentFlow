@@ -22,10 +22,34 @@ function getReceiptNumber(dateValue) {
   return `RF-${dayjs(dateValue).format('YYYYMM')}-${uuidv4().slice(0, 4).toUpperCase()}`;
 }
 
+function toMoney(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function getFlexiblePaymentState({
+  monthlyRentDue = 0,
+  carriedForwardAmount = 0,
+  manualDueAmount = 0,
+  amountPaid = 0,
+}) {
+  const totalDue =
+    Number(monthlyRentDue || 0) +
+    Number(carriedForwardAmount || 0) +
+    Number(manualDueAmount || 0);
+  const paid = Number(amountPaid || 0);
+
+  return {
+    totalDue,
+    remainingAmount: Math.max(totalDue - paid, 0),
+    advanceAmount: Math.max(paid - totalDue, 0),
+  };
+}
+
 async function populatePayment(paymentId) {
   return Payment.findById(paymentId)
     .populate('room', 'roomNumber monthlyRent')
-    .populate('tenant', 'fullName phone')
+    .populate('tenant', 'fullName phone whatsappNumber')
     .populate('recordedBy', 'name role')
     .populate('entries.recordedBy', 'name role');
 }
@@ -55,7 +79,7 @@ async function listPayments(req, res) {
 
   const payments = await Payment.find(filters)
     .populate('room', 'roomNumber')
-    .populate('tenant', 'fullName phone')
+    .populate('tenant', 'fullName phone whatsappNumber')
     .populate('recordedBy', 'name')
     .populate('entries.recordedBy', 'name')
     .sort({ year: -1, paymentDate: -1, createdAt: -1 });
@@ -84,7 +108,9 @@ async function recordPayment(req, res) {
   const paymentDate = req.body.paymentDate || new Date();
   const month = req.body.month || getMonthLabel(paymentDate);
   const year = Number(req.body.year || dayjs(paymentDate).year());
-  const amountReceivedToday = Number(req.body.amountPaid);
+  const amountReceivedToday = toMoney(req.body.amountPaid);
+  const manualDueToAdd = toMoney(req.body.manualDueAmount);
+  const manualDueRemark = req.body.manualDueRemark || req.body.remark;
 
   const [tenant, room] = await Promise.all([
     Tenant.findById(req.body.tenant),
@@ -105,25 +131,34 @@ async function recordPayment(req, res) {
     });
   }
 
+  if (
+    String(tenant.room) !== String(room._id) &&
+    String(room.currentTenant) === String(tenant._id)
+  ) {
+    tenant.room = room._id;
+    await tenant.save();
+  }
+
   if (String(tenant.room) !== String(room._id)) {
     return sendError(res, {
       statusCode: 400,
-      message: 'Tenant is not assigned to this room.',
+      message:
+        'This tenant is not linked to the selected room. Please open the tenant profile and reassign the room once.',
     });
   }
 
   let payment = await Payment.findOne({ room: room._id, month, year });
 
   if (payment) {
-    const totalDue = Number(payment.amountPaid || 0) + Number(payment.remainingAmount || 0);
+    const totalManualDue =
+      Number(payment.manualDueAmount || 0) + manualDueToAdd;
     const newAmountPaid = Number(payment.amountPaid || 0) + amountReceivedToday;
-
-    if (newAmountPaid > totalDue) {
-      return sendError(res, {
-        statusCode: 400,
-        message: 'Amount received exceeds the remaining due for this month.',
-      });
-    }
+    const nextState = getFlexiblePaymentState({
+      monthlyRentDue: payment.monthlyRentDue,
+      carriedForwardAmount: payment.carriedForwardAmount,
+      manualDueAmount: totalManualDue,
+      amountPaid: newAmountPaid,
+    });
 
     payment.entries = [
       ...normalizePaymentEntries(payment),
@@ -135,8 +170,13 @@ async function recordPayment(req, res) {
         recordedBy: req.user._id,
       }),
     ];
+    payment.manualDueAmount = totalManualDue;
+    payment.manualDueRemark = manualDueToAdd > 0
+      ? manualDueRemark
+      : payment.manualDueRemark;
     payment.amountPaid = newAmountPaid;
-    payment.remainingAmount = totalDue - newAmountPaid;
+    payment.remainingAmount = nextState.remainingAmount;
+    payment.advanceAmount = nextState.advanceAmount;
     payment.isPartialPayment = payment.remainingAmount > 0;
     payment.paymentMethod = req.body.paymentMethod || payment.paymentMethod;
     payment.paymentDate = paymentDate;
@@ -146,15 +186,12 @@ async function recordPayment(req, res) {
   } else {
     const previousPayment = await getPreviousPayment(room._id, month, year);
     const previousRemaining = Number(previousPayment?.remainingAmount || 0);
-    const totalDue = Number(room.monthlyRent || 0) + previousRemaining;
-    const remainingAmount = totalDue - amountReceivedToday;
-
-    if (remainingAmount < 0) {
-      return sendError(res, {
-        statusCode: 400,
-        message: 'Amount received exceeds the total due for this month.',
-      });
-    }
+    const nextState = getFlexiblePaymentState({
+      monthlyRentDue: room.monthlyRent,
+      carriedForwardAmount: previousRemaining,
+      manualDueAmount: manualDueToAdd,
+      amountPaid: amountReceivedToday,
+    });
 
     payment = await Payment.create({
       tenant: tenant._id,
@@ -163,13 +200,16 @@ async function recordPayment(req, res) {
       year,
       monthlyRentDue: room.monthlyRent,
       carriedForwardAmount: previousRemaining,
+      manualDueAmount: manualDueToAdd,
+      manualDueRemark,
       amountPaid: amountReceivedToday,
-      remainingAmount,
+      remainingAmount: nextState.remainingAmount,
+      advanceAmount: nextState.advanceAmount,
       paymentMethod: req.body.paymentMethod || 'cash',
       paymentDate,
       remark: req.body.remark,
       receiptNumber: getReceiptNumber(paymentDate),
-      isPartialPayment: remainingAmount > 0,
+      isPartialPayment: nextState.remainingAmount > 0,
       recordedBy: req.user._id,
       entries: [
         buildInstallmentEntry({
@@ -186,8 +226,10 @@ async function recordPayment(req, res) {
   const populatedPayment = await populatePayment(payment._id);
 
   await req.logActivity({
-    action: 'PAYMENT_ADDED',
-    details: `${req.user.name} recorded ${amountReceivedToday} for room ${room.roomNumber}.`,
+    action: amountReceivedToday > 0 ? 'PAYMENT_ADDED' : 'DUE_ADDED',
+    details: amountReceivedToday > 0
+      ? `${req.user.name} recorded ${amountReceivedToday} for room ${room.roomNumber}.`
+      : `${req.user.name} added due ${manualDueToAdd} for room ${room.roomNumber}.`,
     entityType: 'payment',
     entityId: payment._id,
   });
@@ -206,10 +248,14 @@ async function recordPayment(req, res) {
   });
 
   await sendToAllUsers({
-    title: `Room ${room.roomNumber} payment recorded`,
-    body: `Rs ${amountReceivedToday} paid by ${req.user.name}${payment.remainingAmount > 0 ? ` (Rs ${payment.remainingAmount} remaining)` : ''}`,
+    title: amountReceivedToday > 0
+      ? `Room ${room.roomNumber} payment recorded`
+      : `Room ${room.roomNumber} due added`,
+    body: amountReceivedToday > 0
+      ? `Rs ${amountReceivedToday} paid by ${req.user.name}${payment.remainingAmount > 0 ? ` (Rs ${payment.remainingAmount} remaining)` : payment.advanceAmount > 0 ? ` (Rs ${payment.advanceAmount} advance)` : ''}`
+      : `Rs ${manualDueToAdd} due added by ${req.user.name} (Rs ${payment.remainingAmount} remaining)`,
     data: {
-      type: 'payment_recorded',
+      type: amountReceivedToday > 0 ? 'payment_recorded' : 'due_added',
       paymentId: String(payment._id),
       roomId: String(room._id),
     },
@@ -220,7 +266,10 @@ async function recordPayment(req, res) {
     message: 'Payment recorded successfully.',
     data: populatedPayment,
     meta: {
-      totalDue: Number(populatedPayment.amountPaid || 0) + Number(populatedPayment.remainingAmount || 0),
+      totalDue:
+        Number(populatedPayment.monthlyRentDue || 0) +
+        Number(populatedPayment.carriedForwardAmount || 0) +
+        Number(populatedPayment.manualDueAmount || 0),
     },
   });
 }
@@ -236,22 +285,29 @@ async function editPayment(req, res) {
   }
 
   const existingAmountPaid = Number(payment.amountPaid || 0);
-  const totalDue = existingAmountPaid + Number(payment.remainingAmount || 0);
+  const manualDueAmount =
+    req.body.manualDueAmount !== undefined
+      ? toMoney(req.body.manualDueAmount)
+      : Number(payment.manualDueAmount || 0);
   const updatedAmountPaid =
     req.body.amountPaid !== undefined ? Number(req.body.amountPaid) : existingAmountPaid;
-  const remainingAmount = totalDue - updatedAmountPaid;
+  const nextState = getFlexiblePaymentState({
+    monthlyRentDue: payment.monthlyRentDue,
+    carriedForwardAmount: payment.carriedForwardAmount,
+    manualDueAmount,
+    amountPaid: updatedAmountPaid,
+  });
   const normalizedEntries = normalizePaymentEntries(payment);
 
-  if (remainingAmount < 0) {
-    return sendError(res, {
-      statusCode: 400,
-      message: 'Updated amount exceeds the total due.',
-    });
-  }
-
+  payment.manualDueAmount = manualDueAmount;
+  payment.manualDueRemark =
+    req.body.manualDueRemark !== undefined
+      ? req.body.manualDueRemark
+      : payment.manualDueRemark;
   payment.amountPaid = updatedAmountPaid;
-  payment.remainingAmount = remainingAmount;
-  payment.isPartialPayment = remainingAmount > 0;
+  payment.remainingAmount = nextState.remainingAmount;
+  payment.advanceAmount = nextState.advanceAmount;
+  payment.isPartialPayment = nextState.remainingAmount > 0;
   payment.paymentMethod = req.body.paymentMethod || payment.paymentMethod;
   payment.paymentDate = req.body.paymentDate || payment.paymentDate;
   payment.remark = req.body.remark !== undefined ? req.body.remark : payment.remark;
@@ -354,7 +410,7 @@ async function getPendingPayments(req, res) {
   const { month, year } = getMonthContext();
   const rooms = await Room.find({ status: 'occupied' }).populate('currentTenant', 'fullName phone');
   const payments = await Payment.find({ month, year }).select(
-    'room amountPaid remainingAmount monthlyRentDue carriedForwardAmount',
+    'room amountPaid remainingAmount monthlyRentDue carriedForwardAmount manualDueAmount manualDueRemark advanceAmount',
   );
   const paymentMap = new Map(payments.map((payment) => [String(payment.room), payment]));
 
@@ -383,7 +439,10 @@ async function getPendingPayments(req, res) {
         totalDue: snapshot.totalDue,
         remainingAmount: snapshot.remainingAmount,
         carriedForwardAmount: snapshot.carriedForwardAmount,
-        status: payment ? 'partial' : 'pending',
+        manualDueAmount: snapshot.manualDueAmount,
+        manualDueRemark: snapshot.manualDueRemark,
+        advanceAmount: snapshot.advanceAmount,
+        status: snapshot.amountPaid > 0 ? 'partial' : 'pending',
       };
     }),
   );

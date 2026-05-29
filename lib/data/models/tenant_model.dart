@@ -1,11 +1,7 @@
 import 'room_model.dart';
 
 class EmergencyContact {
-  const EmergencyContact({
-    this.name,
-    this.phone,
-    this.relation,
-  });
+  const EmergencyContact({this.name, this.phone, this.relation});
 
   final String? name;
   final String? phone;
@@ -86,6 +82,7 @@ class TenantModel {
     required this.fullName,
     required this.phone,
     required this.joiningDate,
+    this.whatsappNumber,
     this.alternatePhone,
     this.idNumber,
     this.occupation,
@@ -94,6 +91,8 @@ class TenantModel {
     this.profilePhoto,
     this.room,
     this.currentMonthPayment,
+    this.openingDueAmount = 0,
+    this.openingDueRemark,
     this.documents = const [],
     this.paymentHistory = const [],
     this.notes,
@@ -105,6 +104,7 @@ class TenantModel {
   final String id;
   final String fullName;
   final String phone;
+  final String? whatsappNumber;
   final DateTime joiningDate;
   final String? alternatePhone;
   final String? idNumber;
@@ -114,6 +114,8 @@ class TenantModel {
   final String? profilePhoto;
   final RoomReference? room;
   final RoomPaymentSnapshot? currentMonthPayment;
+  final num openingDueAmount;
+  final String? openingDueRemark;
   final List<TenantDocument> documents;
   final List<TenantPaymentHistoryItem> paymentHistory;
   final String? notes;
@@ -126,6 +128,7 @@ class TenantModel {
       id: (json['_id'] ?? '').toString(),
       fullName: (json['fullName'] ?? '') as String,
       phone: (json['phone'] ?? '') as String,
+      whatsappNumber: json['whatsappNumber'] as String?,
       joiningDate:
           DateTime.tryParse(json['joiningDate']?.toString() ?? '') ??
           DateTime.now(),
@@ -143,6 +146,8 @@ class TenantModel {
               json['currentMonthPayment'] as Map<String, dynamic>,
             )
           : null,
+      openingDueAmount: json['openingDueAmount'] as num? ?? 0,
+      openingDueRemark: json['openingDueRemark'] as String?,
       documents: (json['documents'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(TenantDocument.fromJson)

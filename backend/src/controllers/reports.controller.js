@@ -6,6 +6,18 @@ const Tenant = require('../models/Tenant');
 const { generateMonthlyCollectionReport } = require('../services/pdf.service');
 const { sendError, sendSuccess } = require('../utils/response');
 
+function getPaymentTotalDue(payment, fallbackMonthlyRent = 0) {
+  if (!payment) {
+    return Number(fallbackMonthlyRent || 0);
+  }
+
+  return (
+    Number(payment.monthlyRentDue || fallbackMonthlyRent || 0) +
+    Number(payment.carriedForwardAmount || 0) +
+    Number(payment.manualDueAmount || 0)
+  );
+}
+
 async function monthlyCollectionReport(req, res) {
   const date = req.query.month ? dayjs(req.query.month) : dayjs();
   const month = req.query.label || date.format('MMMM YYYY');
@@ -82,7 +94,9 @@ async function dueReport(req, res) {
   const month = dayjs().format('MMMM YYYY');
   const year = dayjs().year();
   const rooms = await Room.find({ status: 'occupied' }).populate('currentTenant', 'fullName phone');
-  const payments = await Payment.find({ month, year }).select('room remainingAmount amountPaid');
+  const payments = await Payment.find({ month, year }).select(
+    'room remainingAmount amountPaid monthlyRentDue carriedForwardAmount manualDueAmount advanceAmount',
+  );
   const paymentMap = new Map(payments.map((payment) => [String(payment.room), payment]));
 
   const dues = rooms
@@ -94,9 +108,7 @@ async function dueReport(req, res) {
       roomId: room._id,
       roomNumber: room.roomNumber,
       tenantName: room.currentTenant?.fullName || 'Unknown',
-      totalDue: paymentMap.get(String(room._id))?.amountPaid
-        ? paymentMap.get(String(room._id)).amountPaid + paymentMap.get(String(room._id)).remainingAmount
-        : room.monthlyRent,
+      totalDue: getPaymentTotalDue(paymentMap.get(String(room._id)), room.monthlyRent),
       remainingAmount: paymentMap.get(String(room._id))?.remainingAmount || room.monthlyRent,
     }))
     .sort((a, b) => b.remainingAmount - a.remainingAmount);

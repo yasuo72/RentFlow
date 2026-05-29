@@ -29,25 +29,34 @@ class TenantReference {
     required this.id,
     required this.fullName,
     this.phone,
+    this.whatsappNumber,
     this.profilePhoto,
     this.joiningDate,
+    this.documents = const [],
   });
 
   final String id;
   final String fullName;
   final String? phone;
+  final String? whatsappNumber;
   final String? profilePhoto;
   final DateTime? joiningDate;
+  final List<TenantDocumentReference> documents;
 
   factory TenantReference.fromJson(Map<String, dynamic> json) {
     return TenantReference(
       id: (json['_id'] ?? '').toString(),
       fullName: (json['fullName'] ?? '') as String,
       phone: json['phone'] as String?,
+      whatsappNumber: json['whatsappNumber'] as String?,
       profilePhoto: json['profilePhoto'] as String?,
       joiningDate: json['joiningDate'] != null
           ? DateTime.tryParse(json['joiningDate'].toString())
           : null,
+      documents: (json['documents'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(TenantDocumentReference.fromJson)
+          .toList(),
     );
   }
 
@@ -55,9 +64,33 @@ class TenantReference {
     '_id': id,
     'fullName': fullName,
     'phone': phone,
+    'whatsappNumber': whatsappNumber,
     'profilePhoto': profilePhoto,
     'joiningDate': joiningDate?.toIso8601String(),
+    'documents': documents.map((item) => item.toJson()).toList(),
   };
+}
+
+class TenantDocumentReference {
+  const TenantDocumentReference({
+    required this.type,
+    required this.url,
+    required this.name,
+  });
+
+  final String type;
+  final String url;
+  final String name;
+
+  factory TenantDocumentReference.fromJson(Map<String, dynamic> json) {
+    return TenantDocumentReference(
+      type: (json['type'] ?? 'other') as String,
+      url: (json['url'] ?? '') as String,
+      name: (json['name'] ?? '') as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {'type': type, 'url': url, 'name': name};
 }
 
 class RoomPaymentSnapshot {
@@ -66,20 +99,26 @@ class RoomPaymentSnapshot {
     this.remainingAmount = 0,
     this.monthlyRentDue = 0,
     this.carriedForwardAmount = 0,
+    this.manualDueAmount = 0,
     this.totalDue = 0,
+    this.advanceAmount = 0,
     this.paymentMethod,
     this.paymentDate,
     this.remark,
+    this.manualDueRemark,
   });
 
   final num amountPaid;
   final num remainingAmount;
   final num monthlyRentDue;
   final num carriedForwardAmount;
+  final num manualDueAmount;
   final num totalDue;
+  final num advanceAmount;
   final String? paymentMethod;
   final DateTime? paymentDate;
   final String? remark;
+  final String? manualDueRemark;
 
   factory RoomPaymentSnapshot.fromJson(Map<String, dynamic> json) {
     return RoomPaymentSnapshot(
@@ -87,15 +126,19 @@ class RoomPaymentSnapshot {
       remainingAmount: json['remainingAmount'] as num? ?? 0,
       monthlyRentDue: json['monthlyRentDue'] as num? ?? 0,
       carriedForwardAmount: json['carriedForwardAmount'] as num? ?? 0,
+      manualDueAmount: json['manualDueAmount'] as num? ?? 0,
       totalDue:
           json['totalDue'] as num? ??
-          ((json['amountPaid'] as num? ?? 0) +
-              (json['remainingAmount'] as num? ?? 0)),
+          ((json['monthlyRentDue'] as num? ?? 0) +
+              (json['carriedForwardAmount'] as num? ?? 0) +
+              (json['manualDueAmount'] as num? ?? 0)),
+      advanceAmount: json['advanceAmount'] as num? ?? 0,
       paymentMethod: json['paymentMethod'] as String?,
       paymentDate: json['paymentDate'] != null
           ? DateTime.tryParse(json['paymentDate'].toString())
           : null,
       remark: json['remark'] as String?,
+      manualDueRemark: json['manualDueRemark'] as String?,
     );
   }
 
@@ -104,10 +147,13 @@ class RoomPaymentSnapshot {
     'remainingAmount': remainingAmount,
     'monthlyRentDue': monthlyRentDue,
     'carriedForwardAmount': carriedForwardAmount,
+    'manualDueAmount': manualDueAmount,
     'totalDue': totalDue,
+    'advanceAmount': advanceAmount,
     'paymentMethod': paymentMethod,
     'paymentDate': paymentDate?.toIso8601String(),
     'remark': remark,
+    'manualDueRemark': manualDueRemark,
   };
 }
 

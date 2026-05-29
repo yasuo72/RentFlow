@@ -31,10 +31,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final notifications = ref.watch(notificationsProvider);
-    final unreadCount = ref.watch(unreadNotificationCountProvider);
+    final dashboard = ref.watch(dashboardProvider);
     final lastSeen = ref.watch(notificationSeenAtProvider);
-    final dues = ref.watch(dashboardProvider).asData?.value.dues ?? const [];
+    final bundle = dashboard.asData?.value;
+    final notifications = notificationsFromDashboard(bundle);
+    final unreadCount = unreadNotificationCount(notifications, lastSeen);
+    final dues = bundle?.dues ?? const [];
 
     return Scaffold(
       body: RefreshIndicator(
@@ -59,9 +61,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     children: [
                       Text(
                         l10n.tr('notifications').toUpperCase(),
-                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          letterSpacing: 0.9,
-                        ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelMedium?.copyWith(letterSpacing: 0.9),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -85,9 +87,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   ? l10n.tr('notificationsSubtitle')
                   : l10n.tr(
                       'notificationsSeenAt',
-                      params: {
-                        'time': AppDateUtils.formatDateTime(lastSeen),
-                      },
+                      params: {'time': AppDateUtils.formatDateTime(lastSeen)},
                     ),
               trailing: Container(
                 width: 62,
@@ -102,9 +102,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 alignment: Alignment.center,
                 child: Text(
                   unreadCount.toString(),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineSmall?.copyWith(color: Colors.white),
                 ),
               ),
             ),
@@ -123,50 +123,57 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    ...dues.take(3).map(
-                      (due) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: AppColors.warningDim,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.warning_amber_rounded,
-                                color: AppColors.warning,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Room ${due.roomNumber}',
-                                    style: Theme.of(context).textTheme.titleMedium,
+                    ...dues
+                        .take(3)
+                        .map(
+                          (due) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.warningDim,
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    due.tenantName,
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                  child: const Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: AppColors.warning,
                                   ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Room ${due.roomNumber}',
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        due.tenantName,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  CurrencyFormatter.inr(due.pendingAmount),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(color: AppColors.warning),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 10),
-                            Text(
-                              CurrencyFormatter.inr(due.pendingAmount),
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(color: AppColors.warning),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -190,7 +197,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _NotificationTile(
                     notification: notification,
-                    unread: lastSeen == null ||
+                    unread:
+                        lastSeen == null ||
                         notification.createdAt.isAfter(lastSeen),
                   ),
                 ),
@@ -203,10 +211,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 }
 
 class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({
-    required this.notification,
-    required this.unread,
-  });
+  const _NotificationTile({required this.notification, required this.unread});
 
   final InAppNotification notification;
   final bool unread;
@@ -225,10 +230,7 @@ class _NotificationTile extends StatelessWidget {
                 color: notification.color.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                notification.icon,
-                color: notification.color,
-              ),
+              child: Icon(notification.icon, color: notification.color),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -257,9 +259,9 @@ class _NotificationTile extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     notification.message,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      height: 1.4,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.4),
                   ),
                   const SizedBox(height: 8),
                   Text(

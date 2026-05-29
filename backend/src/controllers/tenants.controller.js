@@ -1,4 +1,5 @@
 const dayjs = require('dayjs');
+const { v4: uuidv4 } = require('uuid');
 
 const ActivityLog = require('../models/ActivityLog');
 const Room = require('../models/Room');
@@ -13,6 +14,15 @@ const {
   getMonthContext,
 } = require('../services/payment-state.service');
 const { sendError, sendSuccess } = require('../utils/response');
+
+function toMoney(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function getReceiptNumber(dateValue) {
+  return `RF-${dayjs(dateValue).format('YYYYMM')}-${uuidv4().slice(0, 4).toUpperCase()}`;
+}
 
 function ensureArray(value) {
   if (Array.isArray(value)) {
@@ -47,12 +57,14 @@ function buildTenantPayload(body) {
   const fields = [
     'fullName',
     'phone',
+    'whatsappNumber',
     'alternatePhone',
     'idNumber',
     'occupation',
     'permanentAddress',
     'notes',
     'room',
+    'openingDueRemark',
   ];
 
   fields.forEach((field) => {
@@ -73,12 +85,92 @@ function buildTenantPayload(body) {
     payload.familyMembers = Number(body.familyMembers);
   }
 
+  if (body.openingDueAmount !== undefined && body.openingDueAmount !== '') {
+    payload.openingDueAmount = toMoney(body.openingDueAmount);
+  }
+
   const emergencyContact = buildEmergencyContact(body);
   if (emergencyContact) {
     payload.emergencyContact = emergencyContact;
   }
 
   return payload;
+}
+
+async function createOpeningDuePayment({ tenant, room, req }) {
+  const openingDueAmount = toMoney(tenant.openingDueAmount);
+
+  if (openingDueAmount <= 0) {
+    return null;
+  }
+
+  const paymentDate = new Date();
+  const { month, year } = getMonthContext(paymentDate);
+  const remark =
+    tenant.openingDueRemark ||
+    'Opening pending balance added during tenant registration.';
+  const monthlyRentDue = Number(room.monthlyRent || 0);
+  let payment = await Payment.findOne({ room: room._id, month, year });
+  const isExistingPayment = Boolean(payment);
+  let shouldLogActivity = !isExistingPayment;
+
+  if (payment) {
+    const previousManualDue = Number(payment.manualDueAmount || 0);
+    const previousTenant = String(payment.tenant || '');
+    const paid = Number(payment.amountPaid || 0);
+    const carriedForward = Number(payment.carriedForwardAmount || 0);
+    const totalDue = monthlyRentDue + carriedForward + openingDueAmount;
+
+    shouldLogActivity =
+      previousManualDue !== openingDueAmount ||
+      previousTenant !== String(tenant._id) ||
+      Number(payment.monthlyRentDue || 0) !== monthlyRentDue;
+
+    payment.tenant = tenant._id;
+    payment.monthlyRentDue = monthlyRentDue;
+    payment.manualDueAmount = openingDueAmount;
+    payment.manualDueRemark = remark;
+    payment.remainingAmount = Math.max(totalDue - paid, 0);
+    payment.isPartialPayment = payment.remainingAmount > 0;
+    payment.remark = payment.remark || remark;
+    await payment.save();
+  } else {
+    payment = await Payment.create({
+      tenant: tenant._id,
+      room: room._id,
+      month,
+      year,
+      monthlyRentDue,
+      carriedForwardAmount: 0,
+      manualDueAmount: openingDueAmount,
+      manualDueRemark: remark,
+      amountPaid: 0,
+      remainingAmount: monthlyRentDue + openingDueAmount,
+      advanceAmount: 0,
+      paymentMethod: 'cash',
+      paymentDate,
+      remark,
+      receiptNumber: getReceiptNumber(paymentDate),
+      isPartialPayment: true,
+      recordedBy: req.user._id,
+      entries: [],
+    });
+  }
+
+  if (shouldLogActivity) {
+    await req.logActivity({
+      action: isExistingPayment ? 'OPENING_DUE_UPDATED' : 'OPENING_DUE_ADDED',
+      details: `Saved opening due ${openingDueAmount} for ${tenant.fullName} in room ${room.roomNumber}.`,
+      entityType: 'payment',
+      entityId: payment._id,
+    });
+  }
+
+  return payment.populate([
+    { path: 'room', select: 'roomNumber monthlyRent' },
+    { path: 'tenant', select: 'fullName phone' },
+    { path: 'recordedBy', select: 'name role' },
+  ]);
 }
 
 async function uploadTenantAssets(req, tenant) {
@@ -159,10 +251,24 @@ async function getTenant(req, res) {
   const paymentHistory = await Payment.find({ tenant: tenant._id })
     .populate('recordedBy', 'name')
     .sort({ year: -1, paymentDate: -1 });
+  const { month, year } = getMonthContext();
+  const paymentContextMap = tenant.room
+    ? await buildRoomPaymentContextMap([tenant.room._id], month, year)
+    : new Map();
+  const paymentContext = tenant.room
+    ? paymentContextMap.get(String(tenant.room._id)) || {}
+    : {};
 
   return sendSuccess(res, {
     data: {
       ...tenant.toObject(),
+      currentMonthPayment: tenant.room
+        ? buildCurrentMonthSnapshot({
+            roomMonthlyRent: tenant.room.monthlyRent,
+            currentPayment: paymentContext.currentPayment || null,
+            previousRemaining: paymentContext.previousRemaining || 0,
+          })
+        : null,
       paymentHistory,
     },
   });
@@ -193,9 +299,15 @@ async function createTenant(req, res) {
   room.currentTenant = tenant._id;
   await room.save();
 
+  const openingPayment = await createOpeningDuePayment({ tenant, room, req });
+
   await req.logActivity({
     action: 'TENANT_ADDED',
-    details: `Added tenant ${tenant.fullName} to room ${room.roomNumber}.`,
+    details: `Added tenant ${tenant.fullName} to room ${room.roomNumber}${
+      tenant.openingDueAmount > 0
+        ? ` with opening due ${tenant.openingDueAmount}`
+        : ''
+    }.`,
     entityType: 'tenant',
     entityId: tenant._id,
   });
@@ -205,10 +317,22 @@ async function createTenant(req, res) {
     roomNumber: room.roomNumber,
   });
   emitEvent('room:updated', { room });
+  if (openingPayment) {
+    emitEvent('payment:new', {
+      payment: openingPayment,
+      roomNumber: room.roomNumber,
+      tenantName: tenant.fullName,
+      recordedBy: req.user.name,
+    });
+  }
 
   await sendToAllUsers({
     title: 'New Tenant Added',
-    body: `${tenant.fullName} moved into Room ${room.roomNumber}.`,
+    body: `${tenant.fullName} moved into Room ${room.roomNumber}${
+      tenant.openingDueAmount > 0
+        ? ` with opening due Rs ${tenant.openingDueAmount}.`
+        : '.'
+    }`,
     data: {
       type: 'tenant_added',
       tenantId: String(tenant._id),
@@ -219,7 +343,15 @@ async function createTenant(req, res) {
   return sendSuccess(res, {
     statusCode: 201,
     message: 'Tenant added successfully.',
-    data: tenant,
+    data: {
+      ...tenant.toObject(),
+      room,
+      currentMonthPayment: buildCurrentMonthSnapshot({
+        roomMonthlyRent: room.monthlyRent,
+        currentPayment: openingPayment || null,
+        previousRemaining: 0,
+      }),
+    },
   });
 }
 
@@ -267,6 +399,19 @@ async function updateTenant(req, res) {
   await uploadTenantAssets(req, tenant);
   await tenant.save();
 
+  const currentRoom = await Room.findById(tenant.room);
+  const openingPayment =
+    currentRoom && req.body.openingDueAmount !== undefined
+      ? await createOpeningDuePayment({ tenant, room: currentRoom, req })
+      : null;
+  const { month, year } = getMonthContext();
+  const paymentContextMap = currentRoom
+    ? await buildRoomPaymentContextMap([currentRoom._id], month, year)
+    : new Map();
+  const paymentContext = currentRoom
+    ? paymentContextMap.get(String(currentRoom._id)) || {}
+    : {};
+
   await req.logActivity({
     action: 'TENANT_UPDATED',
     details: `Updated tenant ${tenant.fullName}.`,
@@ -276,7 +421,17 @@ async function updateTenant(req, res) {
 
   return sendSuccess(res, {
     message: 'Tenant updated successfully.',
-    data: tenant,
+    data: {
+      ...tenant.toObject(),
+      room: currentRoom || tenant.room,
+      currentMonthPayment: currentRoom
+        ? buildCurrentMonthSnapshot({
+            roomMonthlyRent: currentRoom.monthlyRent,
+            currentPayment: openingPayment || paymentContext.currentPayment || null,
+            previousRemaining: paymentContext.previousRemaining || 0,
+          })
+        : null,
+    },
   });
 }
 

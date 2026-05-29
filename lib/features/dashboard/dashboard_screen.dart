@@ -44,8 +44,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final dashboard = ref.watch(dashboardProvider);
     final auth = ref.watch(authControllerProvider);
     final rooms = ref.watch(roomsProvider);
-    final notifications = ref.watch(notificationsProvider);
-    final unreadNotifications = ref.watch(unreadNotificationCountProvider);
+    final seenAt = ref.watch(notificationSeenAtProvider);
+    final notificationItems = notificationsFromDashboard(
+      dashboard.asData?.value,
+    );
+    final unreadNotifications = unreadNotificationCount(
+      notificationItems,
+      seenAt,
+    );
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -73,16 +79,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             ),
             const SizedBox(height: 12),
             _NotificationsPreviewCard(
-              items: notifications,
+              items: notificationItems,
               unreadCount: unreadNotifications,
               onOpen: () => context.push('/notifications'),
             ),
             const SizedBox(height: 12),
             _StatsGrid(stats: bundle.stats),
             const SizedBox(height: 20),
-            RepaintBoundary(
-              child: CollectionChartWidget(points: bundle.chart),
-            ),
+            RepaintBoundary(child: CollectionChartWidget(points: bundle.chart)),
             const SizedBox(height: 20),
             RepaintBoundary(
               child: PaymentCalendarWidget(events: bundle.calendarEvents),
@@ -106,13 +110,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             const SizedBox(height: 12),
             _RoomsQuickRow(rooms: rooms),
             const SizedBox(height: 20),
-            RepaintBoundary(
-              child: DueAlertsWidget(dues: bundle.dues),
-            ),
+            RepaintBoundary(child: DueAlertsWidget(dues: bundle.dues)),
             const SizedBox(height: 20),
-            RepaintBoundary(
-              child: ActivityFeedWidget(items: bundle.activity),
-            ),
+            RepaintBoundary(child: ActivityFeedWidget(items: bundle.activity)),
           ],
         ),
         loading: () => ListView(
@@ -123,9 +123,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             (index) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: Shimmer.fromColors(
-                baseColor: Theme.of(
-                  context,
-                ).cardColor.withValues(alpha: 0.6),
+                baseColor: Theme.of(context).cardColor.withValues(alpha: 0.6),
                 highlightColor: Colors.white.withValues(alpha: 0.14),
                 child: Container(
                   height: index == 0 ? 130 : 190,
@@ -148,8 +146,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               message: '$error',
               icon: Icons.cloud_off_rounded,
               action: ElevatedButton(
-                onPressed: () =>
-                    ref.read(dashboardProvider.notifier).refresh(),
+                onPressed: () => ref.read(dashboardProvider.notifier).refresh(),
                 child: Text(l10n.tr('retry')),
               ),
             ),
@@ -220,9 +217,9 @@ class _DashboardHeaderState extends State<_DashboardHeader> {
             children: [
               Text(
                 '${dateLabel.toUpperCase()} - $timeLabel',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  letterSpacing: 0.9,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(letterSpacing: 0.9),
               ),
               const SizedBox(height: 6),
               Text(
@@ -266,10 +263,7 @@ class _DashboardHeaderState extends State<_DashboardHeader> {
     );
   }
 
-  String _greetingFor({
-    required int hour,
-    required bool isHindi,
-  }) {
+  String _greetingFor({required int hour, required bool isHindi}) {
     if (isHindi) {
       if (hour < 12) {
         return 'सुप्रभात';
@@ -330,9 +324,9 @@ class _MonthlyOverviewCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   CurrencyFormatter.inr(stats.totalCollected),
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: Colors.white,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineLarge?.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -383,9 +377,9 @@ class _ProgressRing extends StatelessWidget {
           ),
           Text(
             '${(value * 100).round()}%',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppColors.accent,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(color: AppColors.accent),
           ),
         ],
       ),
@@ -408,24 +402,24 @@ class _StatsGrid extends StatelessWidget {
           height: 154,
           child: Row(
             children: [
-            Expanded(
-              child: StatCardWidget(
-                label: l10n.isHindi ? 'कुल कमरे' : 'Total rooms',
-                value: stats.totalRooms,
-                icon: Icons.home_work_rounded,
-                color: AppColors.primary,
-                badge: '${stats.occupied} occ',
+              Expanded(
+                child: StatCardWidget(
+                  label: l10n.isHindi ? 'कुल कमरे' : 'Total rooms',
+                  value: stats.totalRooms,
+                  icon: Icons.home_work_rounded,
+                  color: AppColors.primary,
+                  badge: '${stats.occupied} occ',
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: StatCardWidget(
-                label: l10n.isHindi ? 'किरायेदार' : 'Tenants',
-                value: stats.tenantCount,
-                icon: Icons.people_alt_rounded,
-                color: AppColors.accent,
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatCardWidget(
+                  label: l10n.isHindi ? 'किरायेदार' : 'Tenants',
+                  value: stats.tenantCount,
+                  icon: Icons.people_alt_rounded,
+                  color: AppColors.accent,
+                ),
               ),
-            ),
             ],
           ),
         ),
@@ -434,25 +428,25 @@ class _StatsGrid extends StatelessWidget {
           height: 154,
           child: Row(
             children: [
-            Expanded(
-              child: StatCardWidget(
-                label: l10n.isHindi ? 'बकाया' : 'Pending due',
-                value: stats.totalPending,
-                icon: Icons.schedule_rounded,
-                color: AppColors.warning,
-                isCurrency: true,
+              Expanded(
+                child: StatCardWidget(
+                  label: l10n.isHindi ? 'बकाया' : 'Pending due',
+                  value: stats.totalPending,
+                  icon: Icons.schedule_rounded,
+                  color: AppColors.warning,
+                  isCurrency: true,
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: StatCardWidget(
-                label: l10n.tr('expenses'),
-                value: stats.totalExpenses,
-                icon: Icons.receipt_long_rounded,
-                color: AppColors.danger,
-                isCurrency: true,
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatCardWidget(
+                  label: l10n.tr('expenses'),
+                  value: stats.totalExpenses,
+                  icon: Icons.receipt_long_rounded,
+                  color: AppColors.danger,
+                  isCurrency: true,
+                ),
               ),
-            ),
             ],
           ),
         ),
@@ -615,9 +609,7 @@ class _RoomsQuickRow extends StatelessWidget {
       child: rooms.when(
         data: (items) {
           if (items.isEmpty) {
-            return Center(
-              child: Text(l10n.tr('noRoomsYet')),
-            );
+            return Center(child: Text(l10n.tr('noRoomsYet')));
           }
 
           return ListView.separated(
@@ -630,7 +622,8 @@ class _RoomsQuickRow extends StatelessWidget {
                 'paid' => AppColors.accent,
                 'partial' => AppColors.warning,
                 'pending' => AppColors.danger,
-                _ => Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
+                _ =>
+                  Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey,
               };
 
               return InkWell(

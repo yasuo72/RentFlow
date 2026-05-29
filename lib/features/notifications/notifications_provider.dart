@@ -5,10 +5,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/providers/app_providers.dart';
 import '../../data/models/dashboard_stats_model.dart';
-import '../dashboard/dashboard_provider.dart';
 
-final notificationsProvider = Provider<List<InAppNotification>>((ref) {
-  final bundle = ref.watch(dashboardProvider).asData?.value;
+List<InAppNotification> notificationsFromDashboard(DashboardBundle? bundle) {
   if (bundle == null) {
     return const [];
   }
@@ -19,12 +17,12 @@ final notificationsProvider = Provider<List<InAppNotification>>((ref) {
 
   items.sort((left, right) => right.createdAt.compareTo(left.createdAt));
   return items;
-});
+}
 
-final unreadNotificationCountProvider = Provider<int>((ref) {
-  final seenAt = ref.watch(notificationSeenAtProvider);
-  final notifications = ref.watch(notificationsProvider);
-
+int unreadNotificationCount(
+  List<InAppNotification> notifications,
+  DateTime? seenAt,
+) {
   if (seenAt == null) {
     return notifications.length;
   }
@@ -32,7 +30,7 @@ final unreadNotificationCountProvider = Provider<int>((ref) {
   return notifications
       .where((notification) => notification.createdAt.isAfter(seenAt))
       .length;
-});
+}
 
 final notificationSeenAtProvider =
     NotifierProvider<NotificationSeenAtController, DateTime?>(
@@ -53,17 +51,14 @@ class NotificationSeenAtController extends Notifier<DateTime?> {
     state = seenAt;
     await ref
         .read(sharedPreferencesProvider)
-        .setString(AppStrings.notificationLastSeenKey, seenAt.toIso8601String());
+        .setString(
+          AppStrings.notificationLastSeenKey,
+          seenAt.toIso8601String(),
+        );
   }
 }
 
-enum InAppNotificationType {
-  payment,
-  tenant,
-  room,
-  expense,
-  general,
-}
+enum InAppNotificationType { payment, tenant, room, expense, general }
 
 class InAppNotification {
   const InAppNotification({
@@ -108,7 +103,9 @@ class InAppNotification {
     return InAppNotification(
       id: item.id,
       title: title,
-      message: item.details.isNotEmpty ? item.details : _fallbackMessage(action),
+      message: item.details.isNotEmpty
+          ? item.details
+          : _fallbackMessage(action),
       actor: item.userName,
       createdAt: item.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
       type: type,
@@ -139,10 +136,7 @@ class InAppNotification {
     return action
         .split('_')
         .where((segment) => segment.isNotEmpty)
-        .map(
-          (segment) =>
-              '${segment[0]}${segment.substring(1).toLowerCase()}',
-        )
+        .map((segment) => '${segment[0]}${segment.substring(1).toLowerCase()}')
         .join(' ');
   }
 }

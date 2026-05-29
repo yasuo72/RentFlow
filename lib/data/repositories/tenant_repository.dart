@@ -14,7 +14,9 @@ class TenantRepository {
   final ApiService _apiService;
 
   Future<List<TenantModel>> fetchTenants({bool active = true}) async {
-    final response = await _apiService.get(active ? '/tenants' : '/tenants/inactive');
+    final response = await _apiService.get(
+      active ? '/tenants' : '/tenants/inactive',
+    );
     return (response['data'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(TenantModel.fromJson)
@@ -36,7 +38,10 @@ class TenantRepository {
       profilePhotoPath: profilePhotoPath,
       documents: documents,
     );
-    final response = await _apiService.postMultipart('/tenants', data: formData);
+    final response = await _apiService.postMultipart(
+      '/tenants',
+      data: formData,
+    );
     return TenantModel.fromJson(response['data'] as Map<String, dynamic>);
   }
 
@@ -51,7 +56,10 @@ class TenantRepository {
       profilePhotoPath: profilePhotoPath,
       documents: documents,
     );
-    final response = await _apiService.putMultipart('/tenants/$id', data: formData);
+    final response = await _apiService.putMultipart(
+      '/tenants/$id',
+      data: formData,
+    );
     return TenantModel.fromJson(response['data'] as Map<String, dynamic>);
   }
 
@@ -66,6 +74,32 @@ class TenantRepository {
 
   Future<void> purgeTenant(String id) async {
     await _apiService.delete('/tenants/$id/permanent');
+  }
+
+  Future<TenantModel> uploadTenantDocuments(
+    String id,
+    List<({String path, String type})> documents,
+  ) async {
+    final formData = FormData();
+
+    for (final document in documents) {
+      formData.files.add(
+        MapEntry(
+          'documents',
+          await MultipartFile.fromFile(
+            document.path,
+            filename: _fileName(document.path),
+          ),
+        ),
+      );
+      formData.fields.add(MapEntry('types', document.type));
+    }
+
+    final response = await _apiService.postMultipart(
+      '/tenants/$id/documents',
+      data: formData,
+    );
+    return TenantModel.fromJson(response['data'] as Map<String, dynamic>);
   }
 
   Future<FormData> _buildTenantFormData(

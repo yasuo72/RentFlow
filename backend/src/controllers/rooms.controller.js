@@ -25,7 +25,11 @@ async function attachCurrentMonthStatus(rooms) {
 
     let paymentStatus = 'vacant';
     if (isOccupied && payment) {
-      paymentStatus = payment.remainingAmount > 0 ? 'partial' : 'paid';
+      paymentStatus = payment.remainingAmount > 0
+        ? Number(payment.amountPaid || 0) > 0
+          ? 'partial'
+          : 'pending'
+        : 'paid';
     } else if (isOccupied) {
       paymentStatus = 'pending';
     }
@@ -46,7 +50,7 @@ async function attachCurrentMonthStatus(rooms) {
 
 async function listRooms(req, res) {
   const rooms = await Room.find()
-    .populate('currentTenant', 'fullName phone joiningDate profilePhoto')
+    .populate('currentTenant', 'fullName phone whatsappNumber joiningDate profilePhoto documents')
     .sort({ roomNumber: 1 });
 
   return sendSuccess(res, {

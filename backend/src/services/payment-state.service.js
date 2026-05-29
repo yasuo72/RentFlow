@@ -18,7 +18,11 @@ function getPaymentTotalDue(payment, fallbackMonthlyRent = 0) {
     return Number(fallbackMonthlyRent) || 0;
   }
 
-  return Number(payment.amountPaid || 0) + Number(payment.remainingAmount || 0);
+  return (
+    Number(payment.monthlyRentDue || fallbackMonthlyRent || 0) +
+    Number(payment.carriedForwardAmount || 0) +
+    Number(payment.manualDueAmount || 0)
+  );
 }
 
 function getCarriedForwardAmount(payment, fallbackMonthlyRent = 0) {
@@ -61,6 +65,10 @@ function normalizePaymentEntries(payment) {
       recordedBy: entry.recordedBy || payment.recordedBy || null,
       createdAt: entry.createdAt || payment.createdAt || payment.paymentDate || new Date(),
     }));
+  }
+
+  if (Number(payment.amountPaid || 0) <= 0) {
+    return [];
   }
 
   return [
@@ -145,13 +153,19 @@ function buildCurrentMonthSnapshot({
     const amountPaid = Number(currentPayment.amountPaid || 0);
     const remainingAmount = Number(currentPayment.remainingAmount || 0);
     const carriedForwardAmount = getCarriedForwardAmount(currentPayment, roomMonthlyRent);
+    const manualDueAmount = Number(currentPayment.manualDueAmount || 0);
+    const advanceAmount = Number(currentPayment.advanceAmount || 0);
+    const totalDue = monthlyRentDue + carriedForwardAmount + manualDueAmount;
 
     return {
       amountPaid,
       remainingAmount,
       monthlyRentDue,
       carriedForwardAmount,
-      totalDue: amountPaid + remainingAmount,
+      manualDueAmount,
+      manualDueRemark: currentPayment.manualDueRemark || '',
+      advanceAmount,
+      totalDue,
       paymentDate: currentPayment.paymentDate || null,
       paymentMethod: currentPayment.paymentMethod || 'cash',
       remark: currentPayment.remark || '',
@@ -166,6 +180,9 @@ function buildCurrentMonthSnapshot({
     remainingAmount: totalDue,
     monthlyRentDue,
     carriedForwardAmount,
+    manualDueAmount: 0,
+    manualDueRemark: '',
+    advanceAmount: 0,
     totalDue,
     paymentDate: null,
     paymentMethod: 'cash',

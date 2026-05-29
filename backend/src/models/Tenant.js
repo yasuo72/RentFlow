@@ -47,6 +47,10 @@ const tenantSchema = new mongoose.Schema({
     trim: true,
     index: true,
   },
+  whatsappNumber: {
+    type: String,
+    trim: true,
+  },
   alternatePhone: {
     type: String,
     trim: true,
@@ -83,6 +87,15 @@ const tenantSchema = new mongoose.Schema({
     ref: 'Room',
     required: true,
     index: true,
+  },
+  openingDueAmount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  openingDueRemark: {
+    type: String,
+    trim: true,
   },
   isActive: {
     type: Boolean,

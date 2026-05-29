@@ -18,7 +18,10 @@ class PaymentCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = payment.remainingAmount == 0
+    final hasAdvance = payment.advanceAmount > 0;
+    final statusColor = hasAdvance
+        ? AppColors.info
+        : payment.remainingAmount == 0
         ? AppColors.accent
         : AppColors.warning;
 
@@ -42,9 +45,9 @@ class PaymentCardWidget extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   payment.room?.roomNumber ?? '-',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: statusColor,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(color: statusColor),
                 ),
               ),
               const SizedBox(width: 12),
@@ -67,11 +70,15 @@ class PaymentCardWidget extends StatelessWidget {
                       runSpacing: 8,
                       children: [
                         StatusBadge(
-                          label: payment.paymentMethod.replaceAll('_', ' ').toUpperCase(),
+                          label: payment.paymentMethod
+                              .replaceAll('_', ' ')
+                              .toUpperCase(),
                           color: AppColors.info,
                         ),
                         StatusBadge(
-                          label: payment.remainingAmount == 0
+                          label: hasAdvance
+                              ? 'ADV ${CurrencyFormatter.inr(payment.advanceAmount)}'
+                              : payment.remainingAmount == 0
                               ? 'PAID'
                               : 'REM ${CurrencyFormatter.inr(payment.remainingAmount)}',
                           color: statusColor,

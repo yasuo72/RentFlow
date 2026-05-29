@@ -190,7 +190,9 @@ async function getPaymentCalendar(req, res) {
   const events = payments.flatMap((payment) => {
     const entries = normalizePaymentEntries(payment);
     const totalDue =
-      Number(payment.amountPaid || 0) + Number(payment.remainingAmount || 0);
+      Number(payment.monthlyRentDue || 0) +
+      Number(payment.carriedForwardAmount || 0) +
+      Number(payment.manualDueAmount || 0);
     let cumulativePaid = 0;
 
     return entries.map((entry, index) => {

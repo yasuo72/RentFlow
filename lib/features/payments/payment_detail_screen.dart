@@ -11,6 +11,7 @@ import '../auth/auth_provider.dart';
 import '../dashboard/dashboard_provider.dart';
 import '../rooms/rooms_provider.dart';
 import '../tenants/tenants_provider.dart';
+import 'payment_share_service.dart';
 import 'payments_provider.dart';
 
 class PaymentDetailScreen extends ConsumerWidget {
@@ -62,6 +63,15 @@ class PaymentDetailScreen extends ConsumerWidget {
                     value: CurrencyFormatter.inr(item.carriedForwardAmount),
                   ),
                   _DetailRow(
+                    label: 'Manual extra due',
+                    value: CurrencyFormatter.inr(item.manualDueAmount),
+                  ),
+                  if ((item.manualDueRemark ?? '').isNotEmpty)
+                    _DetailRow(
+                      label: 'Manual due reason',
+                      value: item.manualDueRemark!,
+                    ),
+                  _DetailRow(
                     label: 'Total due',
                     value: CurrencyFormatter.inr(item.totalDue),
                   ),
@@ -72,6 +82,10 @@ class PaymentDetailScreen extends ConsumerWidget {
                   _DetailRow(
                     label: 'Remaining',
                     value: CurrencyFormatter.inr(item.remainingAmount),
+                  ),
+                  _DetailRow(
+                    label: 'Advance / extra paid',
+                    value: CurrencyFormatter.inr(item.advanceAmount),
                   ),
                   _DetailRow(
                     label: 'Latest method',
@@ -87,6 +101,52 @@ class PaymentDetailScreen extends ConsumerWidget {
                   ),
                   if (item.remark != null && item.remark!.isNotEmpty)
                     _DetailRow(label: 'Remark', value: item.remark!),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppSectionCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AppSectionTitle(
+                    eyebrow: 'WhatsApp sharing',
+                    title: 'Receipt and payment QR',
+                    subtitle:
+                        'Send a formatted rent receipt, or share the receipt with the QR image/PDF.',
+                  ),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () => _shareSafely(
+                      context,
+                      () => PaymentShareService.shareWhatsAppText(item),
+                    ),
+                    icon: const Icon(Icons.chat_rounded),
+                    label: const Text('WhatsApp receipt'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => _shareSafely(
+                      context,
+                      () => PaymentShareService.shareReceiptWithQr(item),
+                    ),
+                    icon: const Icon(Icons.qr_code_2_rounded),
+                    label: const Text('Share receipt + QR image'),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => _shareSafely(
+                      context,
+                      () => PaymentShareService.shareReceiptPdfWithQr(
+                        payment: item,
+                        loadPdf: () => ref
+                            .read(paymentRepositoryProvider)
+                            .downloadReceipt(item.id),
+                      ),
+                    ),
+                    icon: const Icon(Icons.picture_as_pdf_rounded),
+                    label: const Text('Share PDF receipt + QR'),
+                  ),
                 ],
               ),
             ),
@@ -113,7 +173,9 @@ class PaymentDetailScreen extends ConsumerWidget {
                         ),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).inputDecorationTheme.fillColor,
+                          color: Theme.of(
+                            context,
+                          ).inputDecorationTheme.fillColor,
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Row(
@@ -138,26 +200,37 @@ class PaymentDetailScreen extends ConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    CurrencyFormatter.inr(installment.amountPaid),
-                                    style: Theme.of(context).textTheme.titleMedium,
+                                    CurrencyFormatter.inr(
+                                      installment.amountPaid,
+                                    ),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${installment.paymentMethod.toUpperCase()} | ${installment.recordedBy?.name ?? '-'}',
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     AppDateUtils.formatDateTime(
                                       installment.paymentDate,
                                     ),
-                                    style: Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
-                                  if ((installment.remark ?? '').isNotEmpty) ...[
+                                  if ((installment.remark ?? '')
+                                      .isNotEmpty) ...[
                                     const SizedBox(height: 4),
                                     Text(
                                       installment.remark!,
-                                      style: Theme.of(context).textTheme.bodySmall,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
                                     ),
                                   ],
                                 ],
@@ -177,6 +250,22 @@ class PaymentDetailScreen extends ConsumerWidget {
             Center(child: Text('Unable to load payment\n$error')),
       ),
     );
+  }
+
+  Future<void> _shareSafely(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to share receipt: $error')),
+      );
+    }
   }
 
   Future<void> _deletePayment(BuildContext context, WidgetRef ref) async {
@@ -232,10 +321,7 @@ class PaymentDetailScreen extends ConsumerWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.label,
-    required this.value,
-  });
+  const _DetailRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -248,10 +334,7 @@ class _DetailRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
           ),
           Flexible(
             child: Text(

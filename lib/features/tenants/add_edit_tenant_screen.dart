@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/constants/app_colors.dart';
+import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_utils.dart';
 import '../../core/utils/validators.dart';
 import '../../core/widgets/app_surfaces.dart';
 import '../../data/models/room_model.dart';
 import '../../data/models/tenant_model.dart';
 import '../../data/repositories/tenant_repository.dart';
+import '../dashboard/dashboard_provider.dart';
+import '../payments/payments_provider.dart';
 import '../rooms/rooms_provider.dart';
 import 'tenants_provider.dart';
 
@@ -21,13 +25,15 @@ class AddEditTenantScreen extends ConsumerStatefulWidget {
   bool get isEditing => tenantId != null && tenantId!.isNotEmpty;
 
   @override
-  ConsumerState<AddEditTenantScreen> createState() => _AddEditTenantScreenState();
+  ConsumerState<AddEditTenantScreen> createState() =>
+      _AddEditTenantScreenState();
 }
 
 class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _whatsappNumberController = TextEditingController();
   final _alternatePhoneController = TextEditingController();
   final _idNumberController = TextEditingController();
   final _occupationController = TextEditingController();
@@ -37,6 +43,8 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
   final _emergencyPhoneController = TextEditingController();
   final _emergencyRelationController = TextEditingController();
   final _notesController = TextEditingController();
+  final _openingDueController = TextEditingController();
+  final _openingDueRemarkController = TextEditingController();
 
   DateTime _joiningDate = DateTime.now();
   String? _selectedRoomId;
@@ -49,6 +57,7 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
   void dispose() {
     _fullNameController.dispose();
     _phoneController.dispose();
+    _whatsappNumberController.dispose();
     _alternatePhoneController.dispose();
     _idNumberController.dispose();
     _occupationController.dispose();
@@ -58,6 +67,8 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
     _emergencyPhoneController.dispose();
     _emergencyRelationController.dispose();
     _notesController.dispose();
+    _openingDueController.dispose();
+    _openingDueRemarkController.dispose();
     super.dispose();
   }
 
@@ -69,6 +80,7 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
     _initialized = true;
     _fullNameController.text = tenant.fullName;
     _phoneController.text = tenant.phone;
+    _whatsappNumberController.text = tenant.whatsappNumber ?? '';
     _alternatePhoneController.text = tenant.alternatePhone ?? '';
     _idNumberController.text = tenant.idNumber ?? '';
     _occupationController.text = tenant.occupation ?? '';
@@ -78,6 +90,10 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
     _emergencyPhoneController.text = tenant.emergencyContact?.phone ?? '';
     _emergencyRelationController.text = tenant.emergencyContact?.relation ?? '';
     _notesController.text = tenant.notes ?? '';
+    _openingDueController.text = tenant.openingDueAmount > 0
+        ? tenant.openingDueAmount.toInt().toString()
+        : '';
+    _openingDueRemarkController.text = tenant.openingDueRemark ?? '';
     _joiningDate = tenant.joiningDate;
     _selectedRoomId = tenant.room?.id;
   }
@@ -143,7 +159,9 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
 
     if (formState == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tenant form is not ready yet. Please try again.')),
+        const SnackBar(
+          content: Text('Tenant form is not ready yet. Please try again.'),
+        ),
       );
       return;
     }
@@ -163,6 +181,7 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
     final payload = {
       'fullName': _fullNameController.text.trim(),
       'phone': _phoneController.text.trim(),
+      'whatsappNumber': _whatsappNumberController.text.trim(),
       'alternatePhone': _alternatePhoneController.text.trim(),
       'idNumber': _idNumberController.text.trim(),
       'occupation': _occupationController.text.trim(),
@@ -174,6 +193,11 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
       'emergencyContactPhone': _emergencyPhoneController.text.trim(),
       'emergencyContactRelation': _emergencyRelationController.text.trim(),
       'notes': _notesController.text.trim(),
+      if (!widget.isEditing)
+        'openingDueAmount':
+            num.tryParse(_openingDueController.text.trim()) ?? 0,
+      if (!widget.isEditing)
+        'openingDueRemark': _openingDueRemarkController.text.trim(),
     };
 
     try {
@@ -194,6 +218,9 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
       ref.invalidate(inactiveTenantsProvider);
       ref.invalidate(tenantDetailProvider(tenant.id));
       ref.invalidate(roomsProvider);
+      ref.invalidate(paymentsProvider);
+      ref.invalidate(pendingPaymentsProvider);
+      ref.invalidate(dashboardProvider);
 
       if (!mounted) {
         return;
@@ -241,8 +268,17 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
               _populateForm(tenant);
             }
 
-            final availableRooms = _availableRooms(rooms, currentRoomId: tenant?.room?.id);
-            _selectedRoomId ??= availableRooms.isNotEmpty ? availableRooms.first.id : null;
+            final availableRooms = _availableRooms(
+              rooms,
+              currentRoomId: tenant?.room?.id,
+            );
+            _selectedRoomId ??= availableRooms.isNotEmpty
+                ? availableRooms.first.id
+                : null;
+            final selectedRoom = _selectedRoom(availableRooms);
+            final openingDue =
+                num.tryParse(_openingDueController.text.trim()) ?? 0;
+            final firstPayable = (selectedRoom?.monthlyRent ?? 0) + openingDue;
 
             return Form(
               key: _formKey,
@@ -258,13 +294,94 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                         : 'Capture the essentials once so recurring payment entry stays quick every month.',
                   ),
                   const SizedBox(height: 18),
+                  if (!widget.isEditing) ...[
+                    AppSectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const AppSectionTitle(
+                            title: 'Opening dues',
+                            subtitle:
+                                'Add old unpaid rent at registration, like 2 months pending before RentFlow tracking started.',
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _openingDueController,
+                            keyboardType: TextInputType.number,
+                            validator: (value) {
+                              if ((value ?? '').trim().isEmpty) {
+                                return null;
+                              }
+                              final parsed = num.tryParse(value!.trim());
+                              if (parsed == null || parsed < 0) {
+                                return 'Enter a valid opening due amount';
+                              }
+                              return null;
+                            },
+                            onChanged: (_) => setState(() {}),
+                            decoration: const InputDecoration(
+                              labelText: 'Opening pending balance',
+                              hintText: '5000',
+                              prefixText: '₹ ',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _openingDueRemarkController,
+                            maxLines: 2,
+                            decoration: const InputDecoration(
+                              labelText: 'Reason',
+                              hintText: 'Last 2 months rent pending',
+                            ),
+                          ),
+                          if (selectedRoom != null) ...[
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _OpeningDueChip(
+                                  label: '1 month',
+                                  amount: selectedRoom.monthlyRent,
+                                  onTap: () =>
+                                      _setOpeningDue(selectedRoom.monthlyRent),
+                                ),
+                                _OpeningDueChip(
+                                  label: '2 months',
+                                  amount: selectedRoom.monthlyRent * 2,
+                                  onTap: () => _setOpeningDue(
+                                    selectedRoom.monthlyRent * 2,
+                                  ),
+                                ),
+                                _OpeningDueChip(
+                                  label: '3 months',
+                                  amount: selectedRoom.monthlyRent * 3,
+                                  onTap: () => _setOpeningDue(
+                                    selectedRoom.monthlyRent * 3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 14),
+                          _OpeningDuePreview(
+                            monthlyRent: selectedRoom?.monthlyRent ?? 0,
+                            openingDue: openingDue,
+                            firstPayable: firstPayable,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
                   AppSectionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const AppSectionTitle(
                           title: 'Identity',
-                          subtitle: 'These details appear in rooms, payments, and reports.',
+                          subtitle:
+                              'These details appear in rooms, payments, and reports.',
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -299,6 +416,23 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _whatsappNumberController,
+                          keyboardType: TextInputType.phone,
+                          validator: (value) {
+                            final text = (value ?? '').trim();
+                            if (text.isEmpty) {
+                              return null;
+                            }
+                            return Validators.phone(text);
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'WhatsApp number',
+                            hintText: 'Leave blank to use primary phone',
+                            prefixIcon: Icon(Icons.chat_bubble_outline_rounded),
+                          ),
                         ),
                         const SizedBox(height: 14),
                         Row(
@@ -350,7 +484,8 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                       children: [
                         const AppSectionTitle(
                           title: 'Stay and safety',
-                          subtitle: 'Room assignment and emergency contact help everyone respond quickly.',
+                          subtitle:
+                              'Room assignment and emergency contact help everyone respond quickly.',
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<String>(
@@ -368,11 +503,14 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                                 ),
                               )
                               .toList(),
-                          onChanged: (value) => setState(() => _selectedRoomId = value),
+                          onChanged: (value) =>
+                              setState(() => _selectedRoomId = value),
                         ),
                         if (availableRooms.isEmpty) ...[
                           const SizedBox(height: 10),
-                          const Text('No vacant rooms are available right now.'),
+                          const Text(
+                            'No vacant rooms are available right now.',
+                          ),
                         ],
                         const SizedBox(height: 14),
                         ListTile(
@@ -428,7 +566,8 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                           maxLines: 4,
                           decoration: const InputDecoration(
                             labelText: 'Notes',
-                            hintText: 'Move-in condition, family context, agreement reminders...',
+                            hintText:
+                                'Move-in condition, family context, agreement reminders...',
                           ),
                         ),
                       ],
@@ -460,7 +599,8 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                           ),
                         ),
                         const SizedBox(height: 14),
-                        if (_profilePhotoPath != null || (tenant?.profilePhoto?.isNotEmpty ?? false))
+                        if (_profilePhotoPath != null ||
+                            (tenant?.profilePhoto?.isNotEmpty ?? false))
                           StatusBadge(
                             label: _profilePhotoPath != null
                                 ? 'New profile photo selected'
@@ -475,7 +615,8 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                             icon: Icons.badge_outlined,
                           ),
                         const SizedBox(height: 14),
-                        if ((tenant?.documents.isEmpty ?? true) && _documents.isEmpty)
+                        if ((tenant?.documents.isEmpty ?? true) &&
+                            _documents.isEmpty)
                           const AppEmptyState(
                             title: 'No documents attached',
                             message:
@@ -488,7 +629,9 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                               ...?tenant?.documents.map(
                                 (document) => ListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Icons.insert_drive_file_outlined),
+                                  leading: const Icon(
+                                    Icons.insert_drive_file_outlined,
+                                  ),
                                   title: Text(document.name),
                                   subtitle: Text(document.type.toUpperCase()),
                                 ),
@@ -496,7 +639,9 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                               ..._documents.map(
                                 (document) => ListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Icons.upload_file_outlined),
+                                  leading: const Icon(
+                                    Icons.upload_file_outlined,
+                                  ),
                                   title: Text(_fileName(document.path)),
                                   subtitle: Text(document.type.toUpperCase()),
                                 ),
@@ -517,7 +662,11 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(widget.isEditing ? 'Save tenant' : 'Create tenant'),
+                          : Text(
+                              widget.isEditing
+                                  ? 'Save tenant'
+                                  : 'Create tenant',
+                            ),
                     ),
                   ),
                 ],
@@ -548,8 +697,130 @@ class _AddEditTenantScreenState extends ConsumerState<AddEditTenantScreen> {
     }).toList();
   }
 
+  RoomModel? _selectedRoom(List<RoomModel> rooms) {
+    if (_selectedRoomId == null) {
+      return null;
+    }
+
+    for (final room in rooms) {
+      if (room.id == _selectedRoomId) {
+        return room;
+      }
+    }
+
+    return null;
+  }
+
+  void _setOpeningDue(num amount) {
+    _openingDueController.text = amount.toInt().toString();
+    setState(() {});
+  }
+
   String _fileName(String path) {
     final segments = path.split(RegExp(r'[\\/]'));
     return segments.isEmpty ? path : segments.last;
+  }
+}
+
+class _OpeningDuePreview extends StatelessWidget {
+  const _OpeningDuePreview({
+    required this.monthlyRent,
+    required this.openingDue,
+    required this.firstPayable,
+  });
+
+  final num monthlyRent;
+  final num openingDue;
+  final num firstPayable;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: openingDue > 0
+            ? AppColors.warning.withValues(alpha: 0.12)
+            : Theme.of(context).inputDecorationTheme.fillColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'First payment total',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 10),
+          _PreviewLine(
+            label: 'Current monthly rent',
+            value: CurrencyFormatter.inr(monthlyRent),
+          ),
+          _PreviewLine(
+            label: 'Opening due',
+            value: CurrencyFormatter.inr(openingDue),
+          ),
+          const Divider(height: 18),
+          _PreviewLine(
+            label: 'Total visible on Add Payment',
+            value: CurrencyFormatter.inr(firstPayable),
+            strong: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OpeningDueChip extends StatelessWidget {
+  const _OpeningDueChip({
+    required this.label,
+    required this.amount,
+    required this.onTap,
+  });
+
+  final String label;
+  final num amount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: const Icon(Icons.add_rounded, size: 16),
+      label: Text('$label ${CurrencyFormatter.inr(amount)}'),
+      onPressed: onTap,
+    );
+  }
+}
+
+class _PreviewLine extends StatelessWidget {
+  const _PreviewLine({
+    required this.label,
+    required this.value,
+    this.strong = false,
+  });
+
+  final String label;
+  final String value;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = strong
+        ? Theme.of(context).textTheme.titleMedium
+        : Theme.of(context).textTheme.bodyMedium;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ),
+          Text(value, style: style),
+        ],
+      ),
+    );
   }
 }

@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/payment_model.dart';
 import '../../data/repositories/payment_repository.dart';
+import '../dashboard/dashboard_provider.dart';
+import '../rooms/rooms_provider.dart';
 
 final paymentsFilterProvider =
     NotifierProvider<PaymentsFilterController, PaymentsFilter>(
@@ -93,11 +95,13 @@ class PaymentsController extends AsyncNotifier<List<PaymentModel>> {
     final previous = state.asData?.value;
 
     try {
-      final fresh = await ref.read(paymentRepositoryProvider).fetchPayments(
-        month: month ?? activeFilter.month,
-        status: status ?? activeFilter.status,
-        roomId: roomId ?? activeFilter.roomId,
-      );
+      final fresh = await ref
+          .read(paymentRepositoryProvider)
+          .fetchPayments(
+            month: month ?? activeFilter.month,
+            status: status ?? activeFilter.status,
+            roomId: roomId ?? activeFilter.roomId,
+          );
       state = AsyncData(fresh);
     } catch (error, stackTrace) {
       if (!silent || previous == null) {
@@ -112,6 +116,8 @@ class PaymentsController extends AsyncNotifier<List<PaymentModel>> {
         .recordPayment(payload);
     ref.invalidateSelf();
     ref.invalidate(pendingPaymentsProvider);
+    ref.invalidate(roomsProvider);
+    ref.invalidate(dashboardProvider);
     return payment;
   }
 }

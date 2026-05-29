@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/providers/app_providers.dart';
+import '../voice/voice_command_sheet.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -145,11 +146,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                           color: AppColors.warning,
                         ),
                         const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            l10n.tr('offlineMode'),
-                          ),
-                        ),
+                        Expanded(child: Text(l10n.tr('offlineMode'))),
                       ],
                     ),
                   ),
@@ -193,6 +190,16 @@ class _AppShellState extends ConsumerState<AppShell> {
             ),
           ),
         ),
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 92),
+          child: FloatingActionButton.extended(
+            heroTag: 'rentflow_voice_assistant',
+            onPressed: () => showVoiceCommandSheet(context),
+            icon: const Icon(Icons.mic_rounded),
+            label: const Text('Voice'),
+          ),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
@@ -271,10 +278,7 @@ class _ShellNavItem extends StatelessWidget {
 }
 
 class _ShellDestination {
-  const _ShellDestination({
-    required this.label,
-    required this.icon,
-  });
+  const _ShellDestination({required this.label, required this.icon});
 
   final String label;
   final IconData icon;

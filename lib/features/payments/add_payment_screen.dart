@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/localization/app_localizations.dart';
@@ -14,6 +13,7 @@ import '../../data/models/payment_model.dart';
 import '../../data/models/room_model.dart';
 import '../auth/auth_provider.dart';
 import '../rooms/rooms_provider.dart';
+import 'payment_share_service.dart';
 import 'payments_provider.dart';
 import 'widgets/payment_qr_card.dart';
 
@@ -30,15 +30,20 @@ class AddPaymentScreen extends ConsumerStatefulWidget {
 class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
+  final _manualDueController = TextEditingController();
+  final _manualDueRemarkController = TextEditingController();
   final _remarkController = TextEditingController();
   final DateTime _paymentDate = DateTime.now();
 
   String _paymentMethod = 'cash';
+  bool _showManualDue = false;
   RoomModel? _selectedRoom;
 
   @override
   void dispose() {
     _amountController.dispose();
+    _manualDueController.dispose();
+    _manualDueRemarkController.dispose();
     _remarkController.dispose();
     super.dispose();
   }
@@ -64,7 +69,9 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
       ),
       body: rooms.when(
         data: (roomList) {
-          final occupiedRooms = roomList.where((room) => room.isOccupied).toList();
+          final occupiedRooms = roomList
+              .where((room) => room.isOccupied)
+              .toList();
           if (occupiedRooms.isEmpty) {
             return const Center(
               child: AppEmptyState(
@@ -84,15 +91,19 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
           final snapshot = room.currentMonthPayment;
           final monthlyRentDue = snapshot?.monthlyRentDue ?? room.monthlyRent;
           final carriedForward = snapshot?.carriedForwardAmount ?? 0;
+          final existingManualDue = snapshot?.manualDueAmount ?? 0;
           final alreadyPaid = snapshot?.amountPaid ?? 0;
           final totalDueEstimate =
               snapshot?.totalDue ?? (monthlyRentDue + carriedForward);
           final outstanding = snapshot?.remainingAmount ?? totalDueEstimate;
           final payingNow = num.tryParse(_amountController.text) ?? 0;
-          final remaining = (outstanding - payingNow).clamp(
-            0,
-            outstanding,
-          );
+          final manualDueToAdd = _showManualDue
+              ? (num.tryParse(_manualDueController.text) ?? 0)
+              : 0;
+          final payableNow = outstanding + manualDueToAdd;
+          final remaining = (payableNow - payingNow).clamp(0, payableNow);
+          final advance = (payingNow - payableNow).clamp(0, payingNow);
+          final updatedTotalDue = totalDueEstimate + manualDueToAdd;
 
           return Form(
             key: _formKey,
@@ -104,8 +115,16 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                   subtitle:
                       '${room.currentTenant?.fullName ?? 'No tenant'} | ${room.building ?? 'Main'}${(room.floor ?? '').isNotEmpty ? ' | Floor ${room.floor}' : ''}',
                   trailing: StatusBadge(
-                    label: remaining == 0 ? 'READY TO CLOSE' : 'PARTIAL DUE',
-                    color: remaining == 0 ? AppColors.accent : AppColors.warning,
+                    label: advance > 0
+                        ? 'ADVANCE'
+                        : remaining == 0
+                        ? 'READY TO CLOSE'
+                        : 'PARTIAL DUE',
+                    color: advance > 0
+                        ? AppColors.info
+                        : remaining == 0
+                        ? AppColors.accent
+                        : AppColors.warning,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -144,6 +163,9 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                               (item) => item.id == value,
                             );
                             _amountController.clear();
+                            _manualDueController.clear();
+                            _manualDueRemarkController.clear();
+                            _showManualDue = false;
                           });
                         },
                       ),
@@ -161,6 +183,10 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                         value: CurrencyFormatter.inr(carriedForward),
                       ),
                       _InfoRow(
+                        label: 'Manual extra already added',
+                        value: CurrencyFormatter.inr(existingManualDue),
+                      ),
+                      _InfoRow(
                         label: 'Already paid this month',
                         value: CurrencyFormatter.inr(alreadyPaid),
                       ),
@@ -168,6 +194,87 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                         label: 'Outstanding before today',
                         value: CurrencyFormatter.inr(outstanding),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppSectionCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppSectionTitle(
+                        eyebrow: 'Flexible dues',
+                        title: 'Add old balance manually',
+                        subtitle:
+                            'Use this when old rent is not already carried forward.',
+                        action: Switch(
+                          value: _showManualDue,
+                          onChanged: (value) {
+                            setState(() {
+                              _showManualDue = value;
+                              if (!value) {
+                                _manualDueController.clear();
+                                _manualDueRemarkController.clear();
+                              }
+                            });
+                          },
+                        ),
+                      ),
+                      if (_showManualDue) ...[
+                        const SizedBox(height: 14),
+                        TextFormField(
+                          controller: _manualDueController,
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            if (!_showManualDue ||
+                                (value ?? '').trim().isEmpty) {
+                              return null;
+                            }
+                            final parsed = num.tryParse(value!.trim());
+                            if (parsed == null || parsed < 0) {
+                              return 'Enter a valid extra due amount';
+                            }
+                            return null;
+                          },
+                          onChanged: (_) => setState(() {}),
+                          decoration: const InputDecoration(
+                            labelText: 'Manual extra due',
+                            prefixText: '₹ ',
+                            hintText: '2500',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _manualDueRemarkController,
+                          maxLines: 2,
+                          decoration: const InputDecoration(
+                            labelText: 'Reason',
+                            hintText: 'Old pending rent for April',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _QuickDueChip(
+                              label: '1 month',
+                              amount: room.monthlyRent,
+                              onTap: () => _setManualDue(room.monthlyRent),
+                            ),
+                            _QuickDueChip(
+                              label: '2 months',
+                              amount: room.monthlyRent * 2,
+                              onTap: () => _setManualDue(room.monthlyRent * 2),
+                            ),
+                            _QuickDueChip(
+                              label: '3 months',
+                              amount: room.monthlyRent * 3,
+                              onTap: () => _setManualDue(room.monthlyRent * 3),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -187,9 +294,13 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).inputDecorationTheme.fillColor,
+                          color: Theme.of(
+                            context,
+                          ).inputDecorationTheme.fillColor,
                           borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: Theme.of(context).dividerColor),
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
+                          ),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -202,10 +313,9 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                                     .textTheme
                                     .headlineMedium
                                     ?.copyWith(
-                                      color: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.color,
+                                      color: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall?.color,
                                     ),
                               ),
                             ),
@@ -216,9 +326,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                                 keyboardType: TextInputType.number,
                                 validator: Validators.amount,
                                 onChanged: (_) => setState(() {}),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineLarge
+                                style: Theme.of(context).textTheme.headlineLarge
                                     ?.copyWith(fontSize: 34),
                                 decoration: const InputDecoration(
                                   hintText: '0',
@@ -236,10 +344,13 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                       ),
                       const SizedBox(height: 14),
                       _PreviewBanner(
-                        totalDue: totalDueEstimate,
+                        totalDue: updatedTotalDue,
+                        payableNow: payableNow,
+                        manualDueToAdd: manualDueToAdd,
                         alreadyPaid: alreadyPaid,
                         payingNow: payingNow,
                         remaining: remaining,
+                        advance: advance,
                       ),
                     ],
                   ),
@@ -303,9 +414,7 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                PaymentQrCard(
-                  onOpen: () => context.push('/payment-qr'),
-                ),
+                PaymentQrCard(onOpen: () => context.push('/payment-qr')),
                 const SizedBox(height: 12),
                 Text(
                   '${l10n.tr('paymentDate')}: ${AppDateUtils.formatDate(_paymentDate)}',
@@ -334,23 +443,10 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
     }
 
     final room = _selectedRoom!;
-    final outstanding = room.currentMonthPayment?.remainingAmount ??
-        room.currentMonthPayment?.totalDue ??
-        room.monthlyRent;
     final amountPaid = num.parse(_amountController.text);
-
-    if (amountPaid > outstanding) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Amount cannot be more than ${CurrencyFormatter.inr(outstanding)} for this payment.',
-            ),
-          ),
-        );
-      }
-      return;
-    }
+    final manualDueAmount = _showManualDue
+        ? (num.tryParse(_manualDueController.text.trim()) ?? 0)
+        : 0;
 
     final payment = await ref.read(paymentsProvider.notifier).recordPayment({
       'tenant': room.currentTenant?.id,
@@ -358,6 +454,8 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
       'month': AppDateUtils.currentMonthLabel(),
       'year': DateTime.now().year,
       'amountPaid': amountPaid,
+      'manualDueAmount': manualDueAmount,
+      'manualDueRemark': _manualDueRemarkController.text.trim(),
       'paymentMethod': _paymentMethod,
       'paymentDate': _paymentDate.toIso8601String(),
       'remark': _remarkController.text.trim(),
@@ -376,19 +474,24 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
         onRecordAnother: () {
           Navigator.of(context).pop();
           _amountController.clear();
+          _manualDueController.clear();
+          _manualDueRemarkController.clear();
           _remarkController.clear();
+          _showManualDue = false;
           setState(() {});
         },
       ),
     );
   }
+
+  void _setManualDue(num amount) {
+    _manualDueController.text = amount.toInt().toString();
+    setState(() {});
+  }
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -400,15 +503,9 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
           ),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(value, style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
     );
@@ -418,42 +515,55 @@ class _InfoRow extends StatelessWidget {
 class _PreviewBanner extends StatelessWidget {
   const _PreviewBanner({
     required this.totalDue,
+    required this.payableNow,
+    required this.manualDueToAdd,
     required this.alreadyPaid,
     required this.payingNow,
     required this.remaining,
+    required this.advance,
   });
 
   final num totalDue;
+  final num payableNow;
+  final num manualDueToAdd;
   final num alreadyPaid;
   final num payingNow;
   final num remaining;
+  final num advance;
 
   @override
   Widget build(BuildContext context) {
     final clear = remaining == 0;
+    final hasAdvance = advance > 0;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: clear ? AppColors.accentDim : AppColors.warningDim,
+        color: hasAdvance
+            ? AppColors.info.withValues(alpha: 0.14)
+            : clear
+            ? AppColors.accentDim
+            : AppColors.warningDim,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Preview',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('Preview', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 10),
+          _InfoRow(label: 'Total due', value: CurrencyFormatter.inr(totalDue)),
           _InfoRow(
-            label: 'Total due',
-            value: CurrencyFormatter.inr(totalDue),
+            label: 'Manual due added',
+            value: CurrencyFormatter.inr(manualDueToAdd),
           ),
           _InfoRow(
             label: 'Already paid',
             value: CurrencyFormatter.inr(alreadyPaid),
+          ),
+          _InfoRow(
+            label: 'Payable now',
+            value: CurrencyFormatter.inr(payableNow),
           ),
           _InfoRow(
             label: 'Paying now',
@@ -475,8 +585,48 @@ class _PreviewBanner extends StatelessWidget {
               ),
             ],
           ),
+          if (hasAdvance) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Advance / extra paid',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                Text(
+                  CurrencyFormatter.inr(advance),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: AppColors.info),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _QuickDueChip extends StatelessWidget {
+  const _QuickDueChip({
+    required this.label,
+    required this.amount,
+    required this.onTap,
+  });
+
+  final String label;
+  final num amount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ActionChip(
+      avatar: const Icon(Icons.add_rounded, size: 16),
+      label: Text('$label ${CurrencyFormatter.inr(amount)}'),
+      onPressed: onTap,
     );
   }
 }
@@ -509,7 +659,9 @@ class _MethodChip extends StatelessWidget {
               : Theme.of(context).inputDecorationTheme.fillColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? AppColors.primary : Theme.of(context).dividerColor,
+            color: selected
+                ? AppColors.primary
+                : Theme.of(context).dividerColor,
           ),
         ),
         child: Column(
@@ -549,20 +701,6 @@ class _SuccessSheet extends StatelessWidget {
   final String recordedBy;
   final VoidCallback onRecordAnother;
 
-  String get whatsappText => '''
-*RentFlow Receipt*
-Room: ${payment.room?.roomNumber ?? '-'} | Tenant: ${payment.tenant?.fullName ?? '-'}
-Month: ${payment.month}
-Rent Due: ${CurrencyFormatter.inr(payment.totalDue)}
-Paid: ${CurrencyFormatter.inr(payment.amountPaid)}
-Remaining: ${CurrencyFormatter.inr(payment.remainingAmount)}
-Method: ${payment.paymentMethod}
-Remark: ${payment.remark ?? '-'}
-Date: ${AppDateUtils.formatDate(payment.paymentDate)}
-Recorded by: $recordedBy
-_RentFlow - Family Rent Manager_
-''';
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -598,10 +736,7 @@ _RentFlow - Family Rent Manager_
           AppSectionCard(
             child: Column(
               children: [
-                _InfoRow(
-                  label: 'Room',
-                  value: payment.room?.roomNumber ?? '-',
-                ),
+                _InfoRow(label: 'Room', value: payment.room?.roomNumber ?? '-'),
                 _InfoRow(
                   label: 'Tenant',
                   value: payment.tenant?.fullName ?? '-',
@@ -613,6 +748,10 @@ _RentFlow - Family Rent Manager_
                 _InfoRow(
                   label: 'Remaining',
                   value: CurrencyFormatter.inr(payment.remainingAmount),
+                ),
+                _InfoRow(
+                  label: 'Advance',
+                  value: CurrencyFormatter.inr(payment.advanceAmount),
                 ),
               ],
             ),
@@ -642,16 +781,49 @@ _RentFlow - Family Rent Manager_
           SizedBox(
             width: double.infinity,
             child: TextButton.icon(
-              onPressed: () async {
-                final encoded = Uri.encodeComponent(whatsappText);
-                await launchUrlString('whatsapp://send?text=$encoded');
-              },
-              icon: const Icon(Icons.share_rounded),
-              label: const Text('Share on WhatsApp'),
+              onPressed: () => _shareSafely(
+                context,
+                () => PaymentShareService.shareWhatsAppText(
+                  payment,
+                  recordedBy: recordedBy,
+                ),
+              ),
+              icon: const Icon(Icons.chat_rounded),
+              label: const Text('WhatsApp receipt'),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: () => _shareSafely(
+                context,
+                () => PaymentShareService.shareReceiptWithQr(
+                  payment,
+                  recordedBy: recordedBy,
+                ),
+              ),
+              icon: const Icon(Icons.qr_code_2_rounded),
+              label: const Text('Share receipt + QR'),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _shareSafely(
+    BuildContext context,
+    Future<void> Function() action,
+  ) async {
+    try {
+      await action();
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to share receipt: $error')),
+      );
+    }
   }
 }
