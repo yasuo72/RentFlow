@@ -53,12 +53,16 @@ class VoiceCommandIntent {
       VoiceCommandType.openDocument => tenant != null && document != null,
       VoiceCommandType.uploadDocument => tenant != null && route != null,
       VoiceCommandType.sendWhatsAppReminder =>
-        tenant != null &&
-            ((tenant!.whatsappNumber ?? tenant!.phone).trim().isNotEmpty),
+        tenant != null && _hasContactNumber(tenant!),
       VoiceCommandType.callTenant =>
         tenant != null && tenant!.phone.trim().isNotEmpty,
       VoiceCommandType.unknown => false,
     };
+  }
+
+  bool _hasContactNumber(TenantModel tenant) {
+    return tenant.whatsappNumber?.trim().isNotEmpty == true ||
+        tenant.phone.trim().isNotEmpty;
   }
 }
 

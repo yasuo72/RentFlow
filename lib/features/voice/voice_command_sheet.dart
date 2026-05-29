@@ -6,6 +6,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:url_launcher/url_launcher_string.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_strings.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/utils/date_utils.dart';
 import '../../core/widgets/app_surfaces.dart';
@@ -456,19 +457,66 @@ class _VoiceCommandSheetState extends ConsumerState<VoiceCommandSheet> {
 
   String _rentReminderMessage(VoiceCommandIntent intent) {
     final tenant = intent.tenant!;
+    final snapshot = tenant.currentMonthPayment;
     final amount =
         intent.amount ??
-        tenant.currentMonthPayment?.remainingAmount ??
-        tenant.currentMonthPayment?.totalDue ??
+        snapshot?.remainingAmount ??
+        snapshot?.totalDue ??
         tenant.room?.monthlyRent ??
         0;
     final roomNumber = tenant.room?.roomNumber ?? '-';
-    final amountText = amount > 0 ? CurrencyFormatter.inr(amount) : 'rent';
+    final monthlyRent =
+        snapshot?.monthlyRentDue ?? tenant.room?.monthlyRent ?? 0;
+    final carriedForward = snapshot?.carriedForwardAmount ?? 0;
+    final manualDue = snapshot?.manualDueAmount ?? 0;
+    final paidSoFar = snapshot?.amountPaid ?? 0;
+    final totalDue = snapshot?.totalDue ?? amount;
+    final remaining = amount;
+    final status = paidSoFar > 0 && remaining > 0
+        ? 'PARTIAL'
+        : remaining <= 0
+        ? 'PAID'
+        : 'PENDING';
 
-    return 'Namaste ${tenant.fullName} ji,\n'
-        'Aapka Room $roomNumber ka $amountText rent due hai.\n'
-        'Kripya payment kar dein.\n\n'
-        'RentFlow';
+    final buffer = StringBuffer()
+      ..writeln('*RentFlow Rent Reminder*')
+      ..writeln()
+      ..writeln('Namaste ${tenant.fullName} ji,')
+      ..writeln()
+      ..writeln('*Room:* $roomNumber')
+      ..writeln('*Month:* ${AppDateUtils.currentMonthLabel()}')
+      ..writeln('*Status:* $status')
+      ..writeln()
+      ..writeln('*Rent Breakdown*')
+      ..writeln('Monthly rent: ${CurrencyFormatter.inr(monthlyRent)}');
+
+    if (carriedForward > 0) {
+      buffer.writeln(
+        'Previous pending: ${CurrencyFormatter.inr(carriedForward)}',
+      );
+    }
+
+    if (manualDue > 0) {
+      buffer.writeln('Extra due: ${CurrencyFormatter.inr(manualDue)}');
+    }
+
+    if (paidSoFar > 0) {
+      buffer.writeln('Paid so far: ${CurrencyFormatter.inr(paidSoFar)}');
+    }
+
+    buffer
+      ..writeln('Total payable: ${CurrencyFormatter.inr(totalDue)}')
+      ..writeln('Remaining: *${CurrencyFormatter.inr(remaining)}*')
+      ..writeln()
+      ..writeln('*Payment QR:*')
+      ..writeln(AppStrings.paymentQrPublicUrl)
+      ..writeln()
+      ..writeln('Kripya payment kar dein.')
+      ..writeln('Upar diya QR scan karke payment kar sakte hain.')
+      ..writeln()
+      ..writeln('_RentFlow - Family Rent Manager_');
+
+    return buffer.toString();
   }
 
   Future<void> _showRoomPicker(List<RoomModel> rooms) async {

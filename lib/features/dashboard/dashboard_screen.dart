@@ -75,6 +75,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             const SizedBox(height: 12),
             PaymentQrCard(
               compact: true,
+              heroTag: 'dashboard-payment-qr-hero',
               onOpen: () => context.push('/payment-qr'),
             ),
             const SizedBox(height: 12),

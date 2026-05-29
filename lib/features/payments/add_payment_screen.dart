@@ -414,7 +414,10 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                PaymentQrCard(onOpen: () => context.push('/payment-qr')),
+                PaymentQrCard(
+                  heroTag: 'add-payment-qr-hero',
+                  onOpen: () => context.push('/payment-qr'),
+                ),
                 const SizedBox(height: 12),
                 Text(
                   '${l10n.tr('paymentDate')}: ${AppDateUtils.formatDate(_paymentDate)}',

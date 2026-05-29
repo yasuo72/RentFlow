@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const http = require('http');
+const path = require('path');
 
 const compression = require('compression');
 const cors = require('cors');
@@ -77,6 +78,17 @@ app.use(
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+app.use(
+  '/public',
+  express.static(path.join(__dirname, '../public'), {
+    maxAge: '7d',
+    immutable: true,
+    setHeaders(res) {
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    },
+  }),
+);
 
 app.get('/health', (req, res) => {
   sendSuccess(res, {
